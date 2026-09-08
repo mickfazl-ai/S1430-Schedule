@@ -172,11 +172,11 @@
     <div class="htop">
       <div>
         <div class="machine-id">HERRENKNECHT EPB · SERIAL 1430 · REFURBISHMENT</div>
-        <h1>Crew Schedule <span>/ 11 gantries</span></h1>
-        <div class="sub">Each bar is a gantry on a crew lane. Drag to move dates, drag an edge to resize, click to open its job checklist. Tick jobs off and the bar fills with progress. Switch the timeline between days, weeks and calendar dates.</div>
+        <h1>Crew Schedule <span>/ 11 jobs</span></h1>
+        <div class="sub">Each bar is a job on a crew lane. Drag to move dates, drag an edge to resize, click to open its checklist. Tick tasks off and the bar fills with progress. Switch the timeline between days, weeks and calendar dates.</div>
       </div>
       <div class="metrics">
-        <div class="metric"><div class="n" id="m-active">0</div><div class="l">Gantries</div></div>
+        <div class="metric"><div class="n" id="m-active">0</div><div class="l">Jobs</div></div>
         <div class="metric"><div class="n" id="m-done">0</div><div class="l">Jobs complete</div></div>
         <div class="metric"><div class="n" id="m-hold">0</div><div class="l">On hold</div></div>
         <div class="metric"><div class="n ppc" id="m-ppc">0%</div><div class="l">Jobs done</div></div>
@@ -208,7 +208,7 @@
     <h2>Crews &amp; work</h2><div class="rule"></div>
     <div class="toolbar">
       <button class="btn" id="addCrew">+ Crew</button>
-      <button class="btn" id="addGantry">+ Gantry</button>
+      <button class="btn" id="addGantry">+ Job</button>
       <button class="btn ghost" id="resetBtn">Reset to plan</button>
     </div>
   </div>
@@ -219,12 +219,12 @@
     </table>
   </div>
 
-  <div class="shead"><h2>Constraint log</h2><div class="rule"></div><div class="hint">clear blockers before a gantry can advance — Last Planner style</div>
+  <div class="shead"><h2>Constraint log</h2><div class="rule"></div><div class="hint">clear blockers before a job can advance — Last Planner style</div>
     <button class="btn" id="addCon">+ Constraint</button>
   </div>
   <div class="clog">
     <table>
-      <thead><tr><th style="width:70px">Gantry</th><th>Constraint / make-ready</th><th style="width:150px">Owner</th><th style="width:96px">Status</th><th style="width:44px"></th></tr></thead>
+      <thead><tr><th style="width:70px">Job</th><th>Constraint / make-ready</th><th style="width:150px">Owner</th><th style="width:96px">Status</th><th style="width:44px"></th></tr></thead>
       <tbody id="clogBody"></tbody>
     </table>
   </div>
@@ -445,7 +445,7 @@ function renderTimeline(){
     const over=active>crew.cap;
     lbl.innerHTML=`<div class="cn" data-crew="${crew.id}"><span class="cbadge" style="background:${crew.color}"></span>${crew.name}<span class="edit">edit</span></div>
       <div class="cmem">${crew.members||''}</div>
-      <div class="cload" style="color:${over?'var(--stop)':'var(--ink-faint)'}">${active} / ${crew.cap} gantries${over?' ⚠':''}</div>`;
+      <div class="cload" style="color:${over?'var(--stop)':'var(--ink-faint)'}">${active} / ${crew.cap} jobs${over?' ⚠':''}</div>`;
     lbl.querySelector('.cn').addEventListener('click',()=>editCrew(crew.id));
     lane.appendChild(lbl);
 
@@ -460,7 +460,7 @@ function renderTimeline(){
     // bars
     gantries.filter(g=>g.crew===crew.id).forEach(g=>track.appendChild(makeBar(g,crew,pxPerDay)));
     // add hint if empty
-    if(active===0){const a=document.createElement('div');a.className='addbar';a.textContent="+ add gantry";a.onclick=()=>addGantry(crew.id);track.appendChild(a);}
+    if(active===0){const a=document.createElement('div');a.className='addbar';a.textContent="+ add job";a.onclick=()=>addGantry(crew.id);track.appendChild(a);}
     lane.appendChild(track);tl.appendChild(lane);
   });
 }
@@ -599,9 +599,9 @@ function editGantry(id){
   const g=gantries.find(x=>x.id===id);if(!g)return;
   const startDate=dateForDay(g.start),endDate=dateForDay(g.start+g.dur-1);
   openModal(`
-    <h3>Edit gantry <span style="color:var(--hazard)">${g.id}</span></h3>
+    <h3>Edit job <span style="color:var(--hazard)">${g.id}</span></h3>
     <div class="body">
-      <div class="fld"><label>Gantry name / ID</label><input id="f-id" value="${g.id}"></div>
+      <div class="fld"><label>Job name / ID</label><input id="f-id" value="${g.id}"></div>
       <div class="fld"><label>Job Description</label><textarea id="f-scope">${g.scope||''}</textarea></div>
       <div class="fld row2">
         <div class="fld"><label>Crew</label><select id="f-crew">${crews.map(c=>`<option value="${c.id}" ${c.id===g.crew?'selected':''}>${c.name}</option>`).join('')}</select></div>
@@ -668,7 +668,7 @@ function editGantry(id){
   };
 }
 function addGantry(crewId){
-  const id="G?"+(gantries.length+1);
+  const id="JOB "+(gantries.length+1);
   const g={id:id,crew:crewId||crews[0].id,start:dayIndexToday()>0?dayIndexToday():0,dur:10,pri:"norm",scope:""};
   gantries.push(g);renderAll();save();editGantry(g.id);
 }
@@ -679,7 +679,7 @@ function editCrew(id){
     <div class="body">
       <div class="fld"><label>Crew name</label><input id="c-name" value="${c.name}"></div>
       <div class="fld"><label>Members</label><input id="c-mem" value="${c.members||''}"></div>
-      <div class="fld"><label>Capacity (gantries at once)</label><input type="number" min="1" id="c-cap" value="${c.cap}"></div>
+      <div class="fld"><label>Capacity (jobs at once)</label><input type="number" min="1" id="c-cap" value="${c.cap}"></div>
       <div class="fld"><label>Lane colour</label><div class="swatches" id="c-sw">${CREW_COLORS.map(col=>`<i data-col="${col}" class="${col===c.color?'sel':''}" style="background:${col}"></i>`).join('')}</div></div>
     </div>
     <div class="foot">
@@ -734,8 +734,8 @@ document.getElementById('resetBtn').onclick=async()=>{
 };
 
 document.getElementById('foot').innerHTML=
-  "Timeline schedule: each bar is a gantry on a crew lane. Drag a bar to move its dates, drag either edge to change duration, drag to another lane to reassign crew, tap to open its job checklist. "+
-  "Switch Days / Weeks / Dates, and set the project start date. Add or delete crews, gantries and constraints. "+
+  "Timeline schedule: each bar is a job on a crew lane. Drag a bar to move its dates, drag either edge to change duration, drag to another lane to reassign crew, tap to open its checklist. "+
+  "Switch Days / Weeks / Dates, and set the project start date. Add or delete crews, jobs and constraints. "+
   "This is a shared live board — everyone with the link edits the same schedule and changes sync between devices (green dot = live). It falls back to this device's storage if it can't reach the server. "+
   "Crew structure and pipe specs are from the site notes (Hogan); dates and durations are planning inputs — adjust to the real program.";
 
