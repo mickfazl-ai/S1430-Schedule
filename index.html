@@ -161,6 +161,66 @@
   ::-webkit-scrollbar{height:11px;width:11px}
   ::-webkit-scrollbar-track{background:var(--steel-900)}
   ::-webkit-scrollbar-thumb{background:var(--steel-600);border-radius:6px;border:2px solid var(--steel-900)}
+  /* ---------- print crew sheets ---------- */
+  #printArea{display:none}
+  @media print{
+    body{background:#fff !important;color:#000 !important;padding:0}
+    body > .wrap, body > .hazbar, .sheet-scrim, .scrim{display:none !important}
+    #printArea{display:block !important}
+    .psheet{page-break-after:always;padding:12mm 11mm;font-family:Arial,Helvetica,sans-serif;color:#000}
+    .psheet:last-child{page-break-after:auto}
+    .phead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #000;padding-bottom:6px;margin-bottom:8px}
+    .phead .pm{font-size:10px;letter-spacing:.5px;color:#333;font-weight:700}
+    .phead h2{font-size:22px;font-weight:800;margin:1px 0 0}
+    .phead .pr{text-align:right;font-size:11px;color:#333}
+    .pcrew{font-size:12px;color:#444;margin-bottom:10px}
+    .pjob{border:1.5px solid #000;border-radius:5px;padding:8px 10px;margin-bottom:8px;break-inside:avoid}
+    .pjh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #999;padding-bottom:4px;margin-bottom:6px}
+    .pjid{font-size:15px;font-weight:800}
+    .pjfat{font-size:9px;font-weight:700;border:1.5px solid #000;border-radius:3px;padding:0 5px;margin-left:6px}
+    .pjd{font-size:11px;color:#333}
+    .pjscope{font-size:11.5px;color:#222;margin-bottom:6px;font-style:italic}
+    .ptasks{list-style:none;margin:0;padding:0;columns:2;column-gap:16px}
+    .ptasks li{font-size:11.5px;padding:2px 0;break-inside:avoid;display:flex;gap:7px;align-items:flex-start}
+    .pbox{display:inline-block;width:12px;height:12px;border:1.5px solid #000;flex:none;margin-top:1px;text-align:center;line-height:11px;font-size:11px;font-weight:800}
+    .done .pbox{background:#000;color:#fff}
+    .done .tt{text-decoration:line-through;color:#666}
+    .pweek{width:100%;border-collapse:collapse;margin-top:4px}
+    .pweek th,.pweek td{border:1px solid #000;padding:4px 6px;font-size:10px;vertical-align:top;text-align:left}
+    .pweek th{background:#eee;text-transform:uppercase;letter-spacing:.3px;font-size:9px}
+    .pweek .wc{font-weight:700;background:#f4f4f4;white-space:nowrap}
+    .pnone{font-size:11px;color:#666;font-style:italic}
+    .pfoot{margin-top:10px;border-top:1px solid #999;padding-top:5px;font-size:9px;color:#555;display:flex;justify-content:space-between}
+  }
+  @media(max-width:700px){
+    .wrap{padding:0 12px}
+    h1{font-size:22px}
+    .htop{gap:12px}
+    .metrics{width:100%;overflow-x:auto}
+    .metric{min-width:72px;padding:8px 11px}
+    .metric .n{font-size:19px}
+    .toolbar{gap:7px}
+    .toolbar .seg{width:100%}
+    .toolbar .seg button{flex:1}
+    .dateinput{flex:1}
+    .shead{flex-wrap:wrap}
+    .shead h2{width:auto}
+    /* timeline: let it scroll sideways, tighten columns a touch */
+    .tl-corner,.lane-label{width:104px;min-width:104px}
+    .lane-label .cmem{display:none}
+    .modal{max-width:100%;max-height:100vh;border-radius:0}
+    .scrim{padding:0;align-items:flex-start}
+    .modal .body{max-height:none}
+    /* the crews & work table + constraint log: allow horizontal scroll */
+    .clog{overflow-x:auto}
+    .clog table{min-width:520px}
+    /* hint that timeline scrolls */
+    .tl-scroll{position:relative}
+  }
+  @media(max-width:700px){
+    .mobile-hint{display:block !important}
+  }
+  .mobile-hint{display:none;font-size:11px;color:var(--ink-faint);margin:6px 0 0;font-style:italic}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -203,17 +263,27 @@
     </div>
   </div>
 
+  <p class="mobile-hint">← swipe the timeline sideways to see all weeks · tap a bar to edit</p>
   <div class="tl-scroll">
     <div class="tl" id="tl"></div>
   </div>
   <div class="legend" id="legend"></div>
 
   <div class="shead">
+    <h2>Print for crews</h2><div class="rule"></div>
+    <div class="toolbar">
+      <label class="save-note" style="color:var(--ink-dim)">For date</label>
+      <input type="date" class="dateinput" id="expDate">
+      <button class="btn" id="printDay">🖨 Daily sheet</button>
+      <button class="btn" id="printWeek">🖨 Weekly sheet</button>
+    </div>
+  </div>
+
+  <div class="shead">
     <h2>Crews &amp; work</h2><div class="rule"></div>
     <div class="toolbar">
       <button class="btn" id="addCrew">+ Crew</button>
       <button class="btn" id="addGantry">+ Job</button>
-      <button class="btn ghost" id="resetBtn">Reset to plan</button>
     </div>
   </div>
   <div class="clog" style="margin-bottom:6px">
@@ -235,6 +305,8 @@
 
   <footer id="foot"></footer>
 </div>
+
+<div id="printArea"></div>
 
 <!-- ===== modal ===== -->
 <div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
@@ -729,13 +801,89 @@ document.getElementById('startDate').addEventListener('change',e=>{
 document.getElementById('addCrew').onclick=addCrew;
 document.getElementById('addGantry').onclick=()=>addGantry();
 document.getElementById('addCon').onclick=addConstraint;
-document.getElementById('resetBtn').onclick=async()=>{
-  if(!confirm('Reset the shared board to the original plan for everyone? This overwrites the current board.'))return;
-  crews=structuredClone(DEFAULT_CREWS);gantries=structuredClone(DEFAULT_GANTRIES);
-  constraints=structuredClone(DEFAULT_CONSTRAINTS);startISO=defaultStart();unit="date";
-  document.querySelectorAll('#unitSeg button').forEach(b=>b.classList.toggle('on',b.dataset.u==='date'));
-  document.getElementById('startDate').value=startISO;renderAll();save();
-};
+/* ---------- printable crew sheets ---------- */
+function dayIndexFor(iso){ // date string -> project day index
+  const d=new Date(iso+"T00:00:00");
+  return Math.round((d-projStart())/86400000);
+}
+function jobsActiveOnDay(crewId,dayIdx){
+  return gantries.filter(g=>g.crew===crewId && dayIdx>=g.start && dayIdx<(g.start+g.dur));
+}
+function fmtD(d){return DOW[(d.getDay()+6)%7]+" "+d.getDate()+" "+MON[d.getMonth()]+" "+d.getFullYear();}
+function jobBlock(g){
+  const tasks=(g.jobs||[]);
+  const sd=dateForDay(g.start), ed=dateForDay(g.start+g.dur-1);
+  const taskHtml = tasks.length
+    ? `<ul class="ptasks">${tasks.map(t=>`<li class="${t.done?'done':''}"><span class="pbox">${t.done?'✓':''}</span><span class="tt">${esc(t.t||'')}</span></li>`).join('')}</ul>`
+    : `<div class="pnone">No checklist items.</div>`;
+  return `<div class="pjob">
+    <div class="pjh"><span class="pjid">${esc(g.id)}${g.pri==='fat'?'<span class="pjfat">FAT</span>':''}</span>
+      <span class="pjd">${sd.getDate()}/${sd.getMonth()+1} – ${ed.getDate()}/${ed.getMonth()+1}</span></div>
+    ${g.scope?`<div class="pjscope">${esc(g.scope)}</div>`:''}
+    ${taskHtml}</div>`;
+}
+function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function printDaily(){
+  const iso=document.getElementById('expDate').value; if(!iso){alert('Pick a date first.');return;}
+  const dayIdx=dayIndexFor(iso); const dObj=new Date(iso+"T00:00:00");
+  const pa=document.getElementById('printArea'); pa.innerHTML="";
+  let any=false;
+  crews.forEach(crew=>{
+    const list=jobsActiveOnDay(crew.id,dayIdx);
+    const sheet=document.createElement('div'); sheet.className='psheet';
+    sheet.innerHTML=`
+      <div class="phead">
+        <div><div class="pm">HERRENKNECHT S-1430 · DAILY WORK SHEET</div><h2>${esc(crew.name)}</h2></div>
+        <div class="pr">${fmtD(dObj)}<br>${esc(crew.members||'')}</div>
+      </div>
+      <div class="pcrew">${list.length} job(s) scheduled this day</div>
+      ${list.length? list.map(jobBlock).join('') : '<div class="pnone">No jobs scheduled for this crew on this day.</div>'}
+      <div class="pfoot"><span>${esc(crew.name)} — ${fmtD(dObj)}</span><span>Printed ${fmtD(new Date())}</span></div>`;
+    pa.appendChild(sheet); any=true;
+  });
+  if(any) window.print();
+}
+
+function printWeekly(){
+  const iso=document.getElementById('expDate').value; if(!iso){alert('Pick a date first.');return;}
+  // snap to Monday of that week
+  let start=dayIndexFor(iso); const dow=(new Date(iso+"T00:00:00").getDay()+6)%7; start-=dow;
+  const weekDays=[...Array(7)].map((_,i)=>start+i);
+  const pa=document.getElementById('printArea'); pa.innerHTML="";
+  crews.forEach(crew=>{
+    // jobs active any day this week
+    const weekJobs=gantries.filter(g=>g.crew===crew.id && g.start<start+7 && (g.start+g.dur)>start);
+    const sheet=document.createElement('div'); sheet.className='psheet';
+    const monday=dateForDay(start), sunday=dateForDay(start+6);
+    // grid: rows=jobs, cols=days, mark active
+    const rows = weekJobs.length? weekJobs.map(g=>{
+      const cells=weekDays.map(d=>{
+        const on = d>=g.start && d<(g.start+g.dur);
+        return `<td style="text-align:center">${on?'●':''}</td>`;
+      }).join('');
+      const done=(g.jobs||[]).filter(t=>t.done).length, tot=(g.jobs||[]).length;
+      return `<tr><td class="wc">${esc(g.id)}${g.pri==='fat'?' ★':''}</td><td>${esc(g.scope||'')}</td>${cells}<td style="text-align:center">${tot?done+'/'+tot:''}</td></tr>`;
+    }).join('') : `<tr><td colspan="10" class="pnone">No jobs scheduled this week.</td></tr>`;
+    sheet.innerHTML=`
+      <div class="phead">
+        <div><div class="pm">HERRENKNECHT S-1430 · WEEKLY WORK SHEET</div><h2>${esc(crew.name)}</h2></div>
+        <div class="pr">Week of ${monday.getDate()}/${monday.getMonth()+1} – ${sunday.getDate()}/${sunday.getMonth()+1}<br>${esc(crew.members||'')}</div>
+      </div>
+      <table class="pweek">
+        <thead><tr><th>Job</th><th>Scope</th>${weekDays.map(d=>{const dd=dateForDay(d);return `<th>${DOW[(dd.getDay()+6)%7]}<br>${dd.getDate()}/${dd.getMonth()+1}</th>`;}).join('')}<th>Done</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="pfoot"><span>${esc(crew.name)} — week of ${monday.getDate()}/${monday.getMonth()+1}</span><span>Printed ${fmtD(new Date())}</span></div>`;
+    pa.appendChild(sheet);
+  });
+  window.print();
+}
+
+// default export date = today (or project start if today is before it)
+(function(){const ed=document.getElementById('expDate'); if(ed){const t=new Date();ed.value=t.toISOString().slice(0,10);}})();
+document.getElementById('printDay').onclick=printDaily;
+document.getElementById('printWeek').onclick=printWeekly;
 
 document.getElementById('foot').innerHTML=
   "Timeline schedule: each bar is a job on a crew lane. Drag a bar to move its dates, drag either edge to change duration, drag to another lane to reassign crew, tap to open its checklist. "+
@@ -745,6 +893,8 @@ document.getElementById('foot').innerHTML=
 
 (async function(){
   await load();
+  // on a phone, weeks view fits far better than day/date columns
+  if(window.innerWidth<=700 && unit==='date') unit='week';
   document.getElementById('startDate').value=startISO;
   document.querySelectorAll('#unitSeg button').forEach(b=>b.classList.toggle('on',b.dataset.u===unit));
   renderAll();
