@@ -110,6 +110,58 @@
   ::-webkit-scrollbar-track{background:var(--steel-900)}
   ::-webkit-scrollbar-thumb{background:var(--steel-600);border-radius:6px;border:2px solid var(--steel-900)}
   @media(max-width:900px){.kb{grid-template-columns:1fr 1fr}}
+
+  /* ---------- mobile cards ---------- */
+  .cardlist{display:none;flex-direction:column;gap:8px}
+  .jcard{background:var(--steel-850);border:1px solid var(--line);border-left:4px solid var(--prog);border-radius:8px;padding:11px 12px;cursor:pointer}
+  .jcard[data-s="Done"]{border-left-color:var(--done)}
+  .jcard[data-s="At SRL"]{border-left-color:var(--srl)}
+  .jcard[data-s="Waiting Parts"]{border-left-color:var(--wait)}
+  .jcard .jc-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px}
+  .jcard .jc-id{font-weight:800;font-size:14px}
+  .jcard .jc-id .mtag{margin-left:6px}
+  .jcard .jc-desc{font-size:13px;line-height:1.35;color:var(--ink)}
+  .jcard .jc-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:7px}
+  .jcard .jc-sys{font-size:11px;color:var(--ink-faint)}
+
+  /* ---------- edit sheet (full-screen on mobile) ---------- */
+  .sheet-scrim{position:fixed;inset:0;background:rgba(8,10,12,.72);display:none;z-index:60;align-items:center;justify-content:center;padding:20px}
+  .sheet-scrim.on{display:flex}
+  .sheet{background:var(--steel-800);border:1px solid var(--line);border-radius:12px;width:100%;max-width:480px;max-height:90vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+  .sheet h3{font-size:14px;font-weight:700;padding:15px 18px;border-bottom:1px solid var(--line);font-family:'Archivo Narrow';letter-spacing:.4px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--steel-800);z-index:1}
+  .sheet .sc-close{background:none;border:none;color:var(--ink-dim);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
+  .sheet .sbody{padding:16px 18px;display:flex;flex-direction:column;gap:13px}
+  .sheet .fld{display:flex;flex-direction:column;gap:6px}
+  .sheet .fld label{font-size:10.5px;color:var(--ink-dim);font-family:'Archivo Narrow';font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+  .sheet .fld input,.sheet .fld select,.sheet .fld textarea{background:var(--steel-850);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:11px 12px;font-family:inherit;font-size:15px}
+  .sheet .fld textarea{resize:vertical;min-height:60px}
+  .sheet .fld.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .sheet .statusrow{display:flex;gap:6px;flex-wrap:wrap}
+  .sheet .stbtn{flex:1;min-width:calc(50% - 3px);padding:11px;border-radius:7px;border:1.5px solid var(--line);background:var(--steel-850);color:var(--ink-dim);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .sheet .stbtn.on{border-color:var(--hazard);color:var(--ink);background:rgba(245,197,24,.1)}
+  .sheet .sfoot{display:flex;gap:9px;padding:14px 18px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--steel-800)}
+  .sheet .sfoot .btn{flex:1;padding:12px;font-size:14px}
+
+  @media(max-width:700px){
+    .wrap{padding:0 12px}
+    h1{font-size:24px}
+    .metrics{width:100%;overflow-x:auto}
+    .metric{min-width:78px;padding:9px 12px}
+    .metric .n{font-size:20px}
+    .toolbar{gap:7px}
+    .toolbar .seg{width:100%}
+    .toolbar .seg button{flex:1}
+    .toolbar select,.toolbar input[type=search]{flex:1;min-width:calc(50% - 4px)}
+    #fSearch{min-width:100%;order:10}
+    .spacer{display:none}
+    #addJob,#exportXlsx{flex:1}
+    .tbl-wrap{display:none}          /* hide table on phone */
+    .cardlist{display:flex}          /* show cards on phone */
+    .kb{grid-template-columns:1fr}   /* single-column kanban */
+    .grp-h .gbar{display:none}
+    .sheet{max-width:100%;max-height:100vh;min-height:100vh;border-radius:0}
+    .sheet-scrim{padding:0}
+  }
   .scrim{position:fixed;inset:0;background:rgba(8,10,12,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
   .scrim.on{display:flex}
   .modal{background:var(--steel-800);border:1px solid var(--line);border-radius:10px;width:100%;max-width:460px;box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden}
@@ -171,24 +223,30 @@
   <footer id="foot"></footer>
 </div>
 
-<div class="scrim" id="scrim"><div class="modal" id="modal">
-  <h3>Add job</h3>
-  <div class="mbody">
+<div class="sheet-scrim" id="sheetScrim"><div class="sheet" id="sheet">
+  <h3><span id="sh-title">Add job</span><button class="sc-close" id="sh-close">✕</button></h3>
+  <div class="sbody">
     <div class="fld row2">
-      <div class="fld"><label>Machine</label><select id="nj-machine"><option value="1430">S-1430</option><option value="1429">S-1429</option></select></div>
-      <div class="fld"><label>Gantry</label><select id="nj-gantry"></select></div>
+      <div class="fld"><label>Machine</label><select id="sh-machine"><option value="1430">S-1430</option><option value="1429">S-1429</option></select></div>
+      <div class="fld"><label>Gantry</label><select id="sh-gantry"></select></div>
     </div>
-    <div class="fld"><label>Job #</label><input id="nj-no" placeholder="e.g. 64"></div>
-    <div class="fld"><label>Description</label><textarea id="nj-descr" placeholder="What's the job?"></textarea></div>
-    <div class="fld row2">
-      <div class="fld"><label>System</label><input id="nj-system" placeholder="e.g. Hosing + Piping"></div>
-      <div class="fld"><label>Status</label><select id="nj-status"><option>In Progress</option><option>Waiting Parts</option><option>At SRL</option><option>Done</option></select></div>
+    <div class="fld"><label>Job #</label><input id="sh-no" placeholder="e.g. 64"></div>
+    <div class="fld"><label>Description</label><textarea id="sh-descr" placeholder="What's the job?"></textarea></div>
+    <div class="fld"><label>System</label><input id="sh-system" placeholder="e.g. Hosing + Piping"></div>
+    <div class="fld"><label>Status</label>
+      <div class="statusrow" id="sh-statusrow">
+        <button class="stbtn" data-st="In Progress">In Progress</button>
+        <button class="stbtn" data-st="Waiting Parts">Waiting Parts</button>
+        <button class="stbtn" data-st="At SRL">At SRL</button>
+        <button class="stbtn" data-st="Done">Done</button>
+      </div>
     </div>
-    <div class="fld"><label>Comments</label><textarea id="nj-comments" placeholder="Optional notes"></textarea></div>
+    <div class="fld"><label>Comments</label><textarea id="sh-comments" placeholder="Optional notes"></textarea></div>
   </div>
-  <div class="mfoot">
-    <button class="btn" id="nj-cancel">Cancel</button>
-    <button class="btn primary" id="nj-save">Add job</button>
+  <div class="sfoot">
+    <button class="btn" id="sh-delete" style="color:var(--wait);display:none">Delete</button>
+    <button class="btn" id="sh-cancel">Cancel</button>
+    <button class="btn primary" id="sh-save">Save</button>
   </div>
 </div></div>
 
@@ -305,15 +363,28 @@ function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g
 let sortKey='gantry',sortDir=1;
 function renderTable(){
   const rows=filtered().sort(cmp);
-  const html=`<div class="tbl-wrap"><table class="jt">
+  if(!rows.length){document.getElementById('viewTable').innerHTML='<div class="empty">No jobs match these filters.</div>';return;}
+  const table=`<div class="tbl-wrap"><table class="jt">
     <thead><tr>
       <th data-k="machine">M/C</th><th data-k="gantry">Gantry</th><th data-k="no">#</th>
       <th data-k="descr">Description</th><th data-k="system">System</th>
       <th data-k="comments">Comments</th><th data-k="status">Status</th><th></th>
     </tr></thead><tbody>${rows.map(rowHtml).join('')}</tbody></table></div>`;
-  const c=document.getElementById('viewTable'); c.innerHTML = rows.length?html:'<div class="empty">No jobs match these filters.</div>';
+  const cards=`<div class="cardlist">${rows.map(cardHtml).join('')}</div>`;
+  const c=document.getElementById('viewTable'); c.innerHTML = table+cards;
   c.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1;}renderTable();});
-  wireRowEdit(c);
+  wireRowEdit(c); wireCards(c);
+}
+function cardHtml(j){
+  return `<div class="jcard" data-id="${j.id}" data-s="${j.status}">
+    <div class="jc-top"><span class="jc-id">${esc(j.gantry)} · ${esc(j.no)}<span class="mtag m${j.machine}">${j.machine}</span></span>
+      <span class="st ${ST_CLASS[j.status]}">${j.status}</span></div>
+    <div class="jc-desc">${esc(j.descr)}</div>
+    <div class="jc-meta"><span class="jc-sys">${esc(j.system)}</span></div>
+  </div>`;
+}
+function wireCards(root){
+  root.querySelectorAll('.jcard').forEach(card=>card.onclick=()=>{const j=jobs.find(x=>x.id===card.dataset.id);if(j)openSheet(j);});
 }
 function rowHtml(j){
   return `<tr data-id="${j.id}">
@@ -354,12 +425,17 @@ function renderGrouped(){
         <span class="gcount">${done}/${list.length} done</span>
         <div class="gbar"><i style="width:${pct}%"></i></div><span class="gpct">${pct}%</span>
         <span class="chev">▾</span></div>
-      <div class="grp-body"><table class="jt"><tbody>
+      <div class="grp-body">
+        <table class="jt"><tbody>
         ${list.sort((a,b)=>(+a.no||0)-(+b.no||0)).map(rowHtml).join('')}
-      </tbody></table></div></div>`;
+        </tbody></table>
+        <div class="cardlist" style="padding:8px">
+        ${list.sort((a,b)=>(+a.no||0)-(+b.no||0)).map(cardHtml).join('')}
+        </div>
+      </div></div>`;
   }).join('');
   c.querySelectorAll('.grp-h').forEach(h=>h.onclick=e=>{if(e.target.closest('td,button,[contenteditable]'))return;const g=h.closest('.grp').dataset.g;collapsed[g]=!collapsed[g];h.closest('.grp').classList.toggle('collapsed');});
-  wireRowEdit(c);
+  wireRowEdit(c); wireCards(c);
 }
 
 /* ---------- KANBAN view ---------- */
@@ -400,44 +476,67 @@ function renderAll(){
 }
 
 /* ---------- add / export ---------- */
-function addJob(){
-  const scrim=document.getElementById('scrim');
-  // populate gantry dropdown from known gantries + full standard set
+let sheetJob=null; // null = adding new, else editing this job
+let sheetStatus='In Progress';
+
+function openSheet(job){
+  sheetJob=job;
   const known=[...new Set([...GORDER, ...jobs.map(j=>j.gantry)])];
-  const gsel=document.getElementById('nj-gantry');
+  const gsel=document.getElementById('sh-gantry');
   gsel.innerHTML=known.map(g=>`<option>${esc(g)}</option>`).join('');
-  // preset from active filters if any
-  if(fMachine.value) document.getElementById('nj-machine').value=fMachine.value;
-  if(fGantry.value)  gsel.value=fGantry.value;
-  document.getElementById('nj-no').value='';
-  document.getElementById('nj-descr').value='';
-  document.getElementById('nj-system').value='';
-  document.getElementById('nj-comments').value='';
-  document.getElementById('nj-status').value='In Progress';
-  scrim.classList.add('on');
-  document.getElementById('nj-descr').focus();
+  if(job){
+    document.getElementById('sh-title').textContent='Edit '+job.gantry+' · '+(job.no||'');
+    document.getElementById('sh-machine').value=job.machine;
+    gsel.value=job.gantry;
+    document.getElementById('sh-no').value=job.no||'';
+    document.getElementById('sh-descr').value=job.descr||'';
+    document.getElementById('sh-system').value=job.system||'';
+    document.getElementById('sh-comments').value=job.comments||'';
+    sheetStatus=job.status||'In Progress';
+    document.getElementById('sh-delete').style.display='block';
+  }else{
+    document.getElementById('sh-title').textContent='Add job';
+    document.getElementById('sh-machine').value=fMachine.value||'1430';
+    gsel.value=fGantry.value||known[0];
+    document.getElementById('sh-no').value='';
+    document.getElementById('sh-descr').value='';
+    document.getElementById('sh-system').value='';
+    document.getElementById('sh-comments').value='';
+    sheetStatus='In Progress';
+    document.getElementById('sh-delete').style.display='none';
+  }
+  drawStatusBtns();
+  document.getElementById('sheetScrim').classList.add('on');
 }
-function saveNewJob(){
-  const status=document.getElementById('nj-status').value;
-  const loc = status==='Done'?'Completed':status==='In Progress'?'Newcastle':status==='At SRL'?'SRL':'Waiting On Parts';
-  const j={
-    id:'j'+Date.now().toString(36),
-    machine:document.getElementById('nj-machine').value,
-    gantry:document.getElementById('nj-gantry').value,
-    no:document.getElementById('nj-no').value.trim(),
-    descr:document.getElementById('nj-descr').value.trim()||'New job',
-    system:document.getElementById('nj-system').value.trim()||'Other',
-    comments:document.getElementById('nj-comments').value.trim(),
-    loc, status
+function drawStatusBtns(){
+  document.querySelectorAll('#sh-statusrow .stbtn').forEach(b=>b.classList.toggle('on',b.dataset.st===sheetStatus));
+}
+function closeSheet(){document.getElementById('sheetScrim').classList.remove('on');sheetJob=null;}
+function saveSheet(){
+  const loc = sheetStatus==='Done'?'Completed':sheetStatus==='In Progress'?'Newcastle':sheetStatus==='At SRL'?'SRL':'Waiting On Parts';
+  const data={
+    machine:document.getElementById('sh-machine').value,
+    gantry:document.getElementById('sh-gantry').value,
+    no:document.getElementById('sh-no').value.trim(),
+    descr:document.getElementById('sh-descr').value.trim()||'New job',
+    system:document.getElementById('sh-system').value.trim()||'Other',
+    comments:document.getElementById('sh-comments').value.trim(),
+    loc, status:sheetStatus
   };
-  jobs.push(j); saveJob(j);
-  document.getElementById('scrim').classList.remove('on');
-  // make sure the new job is visible: if a filter would hide it, clear gantry filter to its gantry
-  if(fMachine.value && fMachine.value!==j.machine) fMachine.value=j.machine;
-  if(fGantry.value && fGantry.value!==j.gantry) fGantry.value=j.gantry;
-  renderAll();
-  flash('Job added ✓');
+  if(sheetJob){
+    Object.assign(sheetJob,data); saveJob(sheetJob);
+    flash('Saved ✓');
+  }else{
+    const j={id:'j'+Date.now().toString(36),...data};
+    jobs.push(j); saveJob(j);
+    if(fMachine.value && fMachine.value!==j.machine) fMachine.value=j.machine;
+    if(fGantry.value && fGantry.value!==j.gantry) fGantry.value=j.gantry;
+    flash('Job added ✓');
+  }
+  closeSheet(); renderAll();
 }
+function addJob(){ openSheet(null); }
+
 function exportXlsx(){
   if(typeof XLSX==='undefined'){alert('Excel library still loading — check your connection and try again in a moment.');return;}
   const f=filtered();
@@ -453,9 +552,12 @@ document.getElementById('viewSeg').onclick=e=>{const b=e.target.closest('button'
 ['fMachine','fGantry','fSystem','fStatus'].forEach(id=>document.getElementById(id).onchange=renderAll);
 document.getElementById('fSearch').oninput=()=>{clearTimeout(saveT2);saveT2=setTimeout(renderAll,180);};
 document.getElementById('addJob').onclick=addJob;
-document.getElementById('nj-save').onclick=saveNewJob;
-document.getElementById('nj-cancel').onclick=()=>document.getElementById('scrim').classList.remove('on');
-document.getElementById('scrim').addEventListener('click',e=>{if(e.target.id==='scrim')e.currentTarget.classList.remove('on');});
+document.getElementById('sh-save').onclick=saveSheet;
+document.getElementById('sh-cancel').onclick=closeSheet;
+document.getElementById('sh-close').onclick=closeSheet;
+document.getElementById('sh-delete').onclick=()=>{if(sheetJob&&confirm('Delete this job?')){deleteJob(sheetJob.id);closeSheet();}};
+document.getElementById('sheetScrim').addEventListener('click',e=>{if(e.target.id==='sheetScrim')closeSheet();});
+document.querySelectorAll('#sh-statusrow .stbtn').forEach(b=>b.onclick=()=>{sheetStatus=b.dataset.st;drawStatusBtns();});
 document.getElementById('exportXlsx').onclick=exportXlsx;
 document.getElementById('foot').innerHTML="Hitlist of all S-1429 and S-1430 jobs imported from the site workbook. Three views — Table (sortable, inline-editable), Grouped by gantry (with completion %), and Kanban by status (drag to change). Filter by machine, gantry, system, status or search. Edits sync live between devices via Supabase; the Excel button exports whatever's currently filtered. Status buckets: In Progress (Newcastle) · Waiting Parts · At SRL · Done (Completed).";
 
