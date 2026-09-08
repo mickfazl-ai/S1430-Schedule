@@ -164,33 +164,40 @@
   /* ---------- print crew sheets ---------- */
   #printArea{display:none}
   @media print{
-    body{background:#fff !important;color:#000 !important;padding:0}
+    @page{margin:12mm}
+    *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+    body{background:#fff !important;color:#111 !important;padding:0}
     body > .wrap, body > .hazbar, .sheet-scrim, .scrim{display:none !important}
-    #printArea{display:block !important}
-    .psheet{page-break-after:always;padding:12mm 11mm;font-family:Arial,Helvetica,sans-serif;color:#000}
-    .psheet:last-child{page-break-after:auto}
-    .phead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #000;padding-bottom:6px;margin-bottom:8px}
-    .phead .pm{font-size:10px;letter-spacing:.5px;color:#333;font-weight:700}
-    .phead h2{font-size:22px;font-weight:800;margin:1px 0 0}
-    .phead .pr{text-align:right;font-size:11px;color:#333}
-    .pcrew{font-size:12px;color:#444;margin-bottom:10px}
-    .pjob{border:1.5px solid #000;border-radius:5px;padding:8px 10px;margin-bottom:8px;break-inside:avoid}
-    .pjh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #999;padding-bottom:4px;margin-bottom:6px}
-    .pjid{font-size:15px;font-weight:800}
-    .pjfat{font-size:9px;font-weight:700;border:1.5px solid #000;border-radius:3px;padding:0 5px;margin-left:6px}
-    .pjd{font-size:11px;color:#333}
-    .pjscope{font-size:11.5px;color:#222;margin-bottom:6px;font-style:italic}
-    .ptasks{list-style:none;margin:0;padding:0;columns:2;column-gap:16px}
-    .ptasks li{font-size:11.5px;padding:2px 0;break-inside:avoid;display:flex;gap:7px;align-items:flex-start}
-    .pbox{display:inline-block;width:12px;height:12px;border:1.5px solid #000;flex:none;margin-top:1px;text-align:center;line-height:11px;font-size:11px;font-weight:800}
-    .done .pbox{background:#000;color:#fff}
-    .done .tt{text-decoration:line-through;color:#666}
-    .pweek{width:100%;border-collapse:collapse;margin-top:4px}
-    .pweek th,.pweek td{border:1px solid #000;padding:4px 6px;font-size:10px;vertical-align:top;text-align:left}
-    .pweek th{background:#eee;text-transform:uppercase;letter-spacing:.3px;font-size:9px}
-    .pweek .wc{font-weight:700;background:#f4f4f4;white-space:nowrap}
-    .pnone{font-size:11px;color:#666;font-style:italic}
-    .pfoot{margin-top:10px;border-top:1px solid #999;padding-top:5px;font-size:9px;color:#555;display:flex;justify-content:space-between}
+    #printArea{display:block !important;font-family:Arial,Helvetica,sans-serif}
+    .pbanner{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #111;padding-bottom:8px;margin-bottom:14px}
+    .pbanner .pm{font-size:10px;letter-spacing:.6px;color:#555;font-weight:700}
+    .pbanner h1{font-size:24px;font-weight:800;margin:2px 0 0;letter-spacing:-.5px}
+    .pbanner .pr{text-align:right;font-size:11px;color:#555;line-height:1.5}
+    .pcrewsec{margin-bottom:16px;break-inside:avoid-page}
+    .pcrewhdr{display:flex;align-items:center;gap:10px;padding:7px 11px;border-radius:6px 6px 0 0;color:#fff}
+    .pcrewhdr .cnm{font-size:16px;font-weight:800;letter-spacing:.3px}
+    .pcrewhdr .cmem{font-size:11px;opacity:.92;font-weight:500}
+    .pcrewhdr .ccount{margin-left:auto;font-size:11px;font-weight:700;background:rgba(255,255,255,.24);padding:2px 9px;border-radius:20px}
+    .pjobs{border:1.5px solid #ccc;border-top:none;border-radius:0 0 6px 6px;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .pjob{border:1px solid #d5d5d5;border-left:5px solid #999;border-radius:5px;padding:8px 10px;break-inside:avoid}
+    .pjh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+    .pjid{font-size:14px;font-weight:800}
+    .pjfat{font-size:8px;font-weight:800;color:#fff;background:#111;border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+    .pjd{font-size:10px;color:#666;white-space:nowrap}
+    .pjscope{font-size:11px;color:#333;margin-bottom:6px;font-style:italic;line-height:1.3}
+    .ptasks{list-style:none;margin:0;padding:0}
+    .ptasks li{font-size:11px;padding:2px 0;break-inside:avoid;display:flex;gap:6px;align-items:flex-start;line-height:1.3}
+    .pbox{display:inline-block;width:11px;height:11px;border:1.4px solid #333;flex:none;margin-top:1px;text-align:center;line-height:10px;font-size:10px;font-weight:800;border-radius:2px}
+    .done .pbox{background:#2e7d32;border-color:#2e7d32;color:#fff}
+    .done .tt{text-decoration:line-through;color:#888}
+    .pnone{font-size:11px;color:#888;font-style:italic;grid-column:1/-1;padding:4px}
+    .pweekwrap{border:1.5px solid #ccc;border-top:none;border-radius:0 0 6px 6px;padding:8px}
+    .pweek{width:100%;border-collapse:collapse}
+    .pweek th,.pweek td{border:1px solid #bbb;padding:5px 7px;font-size:10px;vertical-align:middle;text-align:left}
+    .pweek th{background:#f0f0f0;text-transform:uppercase;letter-spacing:.3px;font-size:9px;font-weight:700}
+    .pweek .wc{font-weight:800;white-space:nowrap}
+    .pweek .on{text-align:center;font-weight:800}
+    .pfoot{margin-top:14px;border-top:1px solid #bbb;padding-top:6px;font-size:9px;color:#777;display:flex;justify-content:space-between}
   }
   @media(max-width:700px){
     .wrap{padding:0 12px}
@@ -810,77 +817,93 @@ function jobsActiveOnDay(crewId,dayIdx){
   return gantries.filter(g=>g.crew===crewId && dayIdx>=g.start && dayIdx<(g.start+g.dur));
 }
 function fmtD(d){return DOW[(d.getDay()+6)%7]+" "+d.getDate()+" "+MON[d.getMonth()]+" "+d.getFullYear();}
-function jobBlock(g){
+function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// resolve a crew colour (which may be a CSS var) to a real hex for print
+const CREW_HEX={"var(--crewA)":"#4f83cc","var(--crewB)":"#5fae7e","var(--crewC)":"#c8794a","var(--crewD)":"#a97bc4","var(--crewE)":"#c9556a"};
+function crewHex(crew){
+  const c=crew.color||"";
+  if(CREW_HEX[c]) return CREW_HEX[c];
+  if(c.startsWith('#')) return c;
+  // fallback: read from a temp element
+  try{const el=document.createElement('span');el.style.color=c;document.body.appendChild(el);const rgb=getComputedStyle(el).color;el.remove();return rgb||'#555';}catch(e){return '#555';}
+}
+
+function jobBlock(g,hex){
   const tasks=(g.jobs||[]);
   const sd=dateForDay(g.start), ed=dateForDay(g.start+g.dur-1);
   const taskHtml = tasks.length
     ? `<ul class="ptasks">${tasks.map(t=>`<li class="${t.done?'done':''}"><span class="pbox">${t.done?'✓':''}</span><span class="tt">${esc(t.t||'')}</span></li>`).join('')}</ul>`
-    : `<div class="pnone">No checklist items.</div>`;
-  return `<div class="pjob">
+    : `<div class="pnone" style="grid-column:auto">No checklist items.</div>`;
+  return `<div class="pjob" style="border-left-color:${hex}">
     <div class="pjh"><span class="pjid">${esc(g.id)}${g.pri==='fat'?'<span class="pjfat">FAT</span>':''}</span>
       <span class="pjd">${sd.getDate()}/${sd.getMonth()+1} – ${ed.getDate()}/${ed.getMonth()+1}</span></div>
     ${g.scope?`<div class="pjscope">${esc(g.scope)}</div>`:''}
     ${taskHtml}</div>`;
 }
-function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function banner(title,right){
+  return `<div class="pbanner">
+    <div><div class="pm">HERRENKNECHT S-1430 · REFURBISHMENT</div><h1>${title}</h1></div>
+    <div class="pr">${right}</div></div>`;
+}
 
 function printDaily(){
   const iso=document.getElementById('expDate').value; if(!iso){alert('Pick a date first.');return;}
   const dayIdx=dayIndexFor(iso); const dObj=new Date(iso+"T00:00:00");
   const pa=document.getElementById('printArea'); pa.innerHTML="";
-  let any=false;
+  let html=banner('Daily Work Sheet', fmtD(dObj));
+  let total=0;
   crews.forEach(crew=>{
     const list=jobsActiveOnDay(crew.id,dayIdx);
-    const sheet=document.createElement('div'); sheet.className='psheet';
-    sheet.innerHTML=`
-      <div class="phead">
-        <div><div class="pm">HERRENKNECHT S-1430 · DAILY WORK SHEET</div><h2>${esc(crew.name)}</h2></div>
-        <div class="pr">${fmtD(dObj)}<br>${esc(crew.members||'')}</div>
-      </div>
-      <div class="pcrew">${list.length} job(s) scheduled this day</div>
-      ${list.length? list.map(jobBlock).join('') : '<div class="pnone">No jobs scheduled for this crew on this day.</div>'}
-      <div class="pfoot"><span>${esc(crew.name)} — ${fmtD(dObj)}</span><span>Printed ${fmtD(new Date())}</span></div>`;
-    pa.appendChild(sheet); any=true;
+    if(!list.length) return;           // only show crews that have work — keeps it compact
+    total+=list.length;
+    const hex=crewHex(crew);
+    html+=`<div class="pcrewsec">
+      <div class="pcrewhdr" style="background:${hex}">
+        <span class="cnm">${esc(crew.name)}</span><span class="cmem">${esc(crew.members||'')}</span>
+        <span class="ccount">${list.length} job${list.length>1?'s':''}</span></div>
+      <div class="pjobs">${list.map(g=>jobBlock(g,hex)).join('')}</div>
+    </div>`;
   });
-  if(any) window.print();
+  if(!total) html+=`<div class="pnone" style="border:1px solid #ccc;border-radius:6px;padding:14px">No jobs scheduled on ${fmtD(dObj)}.</div>`;
+  html+=`<div class="pfoot"><span>S-1430 daily sheet — ${fmtD(dObj)}</span><span>Printed ${fmtD(new Date())}</span></div>`;
+  pa.innerHTML=html; window.print();
 }
 
 function printWeekly(){
   const iso=document.getElementById('expDate').value; if(!iso){alert('Pick a date first.');return;}
-  // snap to Monday of that week
   let start=dayIndexFor(iso); const dow=(new Date(iso+"T00:00:00").getDay()+6)%7; start-=dow;
   const weekDays=[...Array(7)].map((_,i)=>start+i);
+  const monday=dateForDay(start), sunday=dateForDay(start+6);
   const pa=document.getElementById('printArea'); pa.innerHTML="";
+  let html=banner('Weekly Work Sheet', `Week of ${monday.getDate()}/${monday.getMonth()+1} – ${sunday.getDate()}/${sunday.getMonth()+1}`);
+  let total=0;
   crews.forEach(crew=>{
-    // jobs active any day this week
     const weekJobs=gantries.filter(g=>g.crew===crew.id && g.start<start+7 && (g.start+g.dur)>start);
-    const sheet=document.createElement('div'); sheet.className='psheet';
-    const monday=dateForDay(start), sunday=dateForDay(start+6);
-    // grid: rows=jobs, cols=days, mark active
-    const rows = weekJobs.length? weekJobs.map(g=>{
-      const cells=weekDays.map(d=>{
-        const on = d>=g.start && d<(g.start+g.dur);
-        return `<td style="text-align:center">${on?'●':''}</td>`;
-      }).join('');
+    if(!weekJobs.length) return;
+    total+=weekJobs.length;
+    const hex=crewHex(crew);
+    const rows=weekJobs.map(g=>{
+      const cells=weekDays.map(d=>{const on=d>=g.start&&d<(g.start+g.dur);return `<td class="on" style="${on?`background:${hex}22;color:${hex}`:''}">${on?'●':''}</td>`;}).join('');
       const done=(g.jobs||[]).filter(t=>t.done).length, tot=(g.jobs||[]).length;
-      return `<tr><td class="wc">${esc(g.id)}${g.pri==='fat'?' ★':''}</td><td>${esc(g.scope||'')}</td>${cells}<td style="text-align:center">${tot?done+'/'+tot:''}</td></tr>`;
-    }).join('') : `<tr><td colspan="10" class="pnone">No jobs scheduled this week.</td></tr>`;
-    sheet.innerHTML=`
-      <div class="phead">
-        <div><div class="pm">HERRENKNECHT S-1430 · WEEKLY WORK SHEET</div><h2>${esc(crew.name)}</h2></div>
-        <div class="pr">Week of ${monday.getDate()}/${monday.getMonth()+1} – ${sunday.getDate()}/${sunday.getMonth()+1}<br>${esc(crew.members||'')}</div>
-      </div>
-      <table class="pweek">
+      return `<tr><td class="wc" style="border-left:4px solid ${hex}">${esc(g.id)}${g.pri==='fat'?' ★':''}</td><td>${esc(g.scope||'')}</td>${cells}<td class="on">${tot?done+'/'+tot:''}</td></tr>`;
+    }).join('');
+    html+=`<div class="pcrewsec">
+      <div class="pcrewhdr" style="background:${hex}">
+        <span class="cnm">${esc(crew.name)}</span><span class="cmem">${esc(crew.members||'')}</span>
+        <span class="ccount">${weekJobs.length} job${weekJobs.length>1?'s':''}</span></div>
+      <div class="pweekwrap"><table class="pweek">
         <thead><tr><th>Job</th><th>Scope</th>${weekDays.map(d=>{const dd=dateForDay(d);return `<th>${DOW[(dd.getDay()+6)%7]}<br>${dd.getDate()}/${dd.getMonth()+1}</th>`;}).join('')}<th>Done</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div class="pfoot"><span>${esc(crew.name)} — week of ${monday.getDate()}/${monday.getMonth()+1}</span><span>Printed ${fmtD(new Date())}</span></div>`;
-    pa.appendChild(sheet);
+        <tbody>${rows}</tbody></table></div>
+    </div>`;
   });
-  window.print();
+  if(!total) html+=`<div class="pnone" style="border:1px solid #ccc;border-radius:6px;padding:14px">No jobs scheduled for week of ${monday.getDate()}/${monday.getMonth()+1}.</div>`;
+  html+=`<div class="pfoot"><span>S-1430 weekly sheet — week of ${monday.getDate()}/${monday.getMonth()+1}</span><span>Printed ${fmtD(new Date())}</span></div>`;
+  pa.innerHTML=html; window.print();
 }
 
-// default export date = today (or project start if today is before it)
+// default export date = today
 (function(){const ed=document.getElementById('expDate'); if(ed){const t=new Date();ed.value=t.toISOString().slice(0,10);}})();
 document.getElementById('printDay').onclick=printDaily;
 document.getElementById('printWeek').onclick=printWeekly;
