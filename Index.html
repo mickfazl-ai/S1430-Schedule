@@ -305,8 +305,12 @@ function setSync(state){ // 'live' | 'saving' | 'local' | 'offline'
 
 function snapshot(){return {crews,gantries,constraints,unit,startISO};}
 function applyData(d){
-  crews=d.crews; gantries=d.gantries; constraints=d.constraints;
-  unit=d.unit||"date"; startISO=d.startISO||defaultStart();
+  if(!d || typeof d!=='object') return;                 // ignore junk payloads
+  crews       = Array.isArray(d.crews)       ? d.crews       : structuredClone(DEFAULT_CREWS);
+  gantries    = Array.isArray(d.gantries)    ? d.gantries    : structuredClone(DEFAULT_GANTRIES);
+  constraints = Array.isArray(d.constraints) ? d.constraints : structuredClone(DEFAULT_CONSTRAINTS);
+  unit = d.unit || "date";
+  startISO = d.startISO || defaultStart();
   gantries.forEach(g=>{if(!Array.isArray(g.jobs))g.jobs=[];});
 }
 
@@ -598,7 +602,7 @@ function editGantry(id){
     <h3>Edit gantry <span style="color:var(--hazard)">${g.id}</span></h3>
     <div class="body">
       <div class="fld"><label>Gantry name / ID</label><input id="f-id" value="${g.id}"></div>
-      <div class="fld"><label>Scope</label><textarea id="f-scope">${g.scope||''}</textarea></div>
+      <div class="fld"><label>Job Description</label><textarea id="f-scope">${g.scope||''}</textarea></div>
       <div class="fld row2">
         <div class="fld"><label>Crew</label><select id="f-crew">${crews.map(c=>`<option value="${c.id}" ${c.id===g.crew?'selected':''}>${c.name}</option>`).join('')}</select></div>
         <div class="fld"><label>Priority</label><select id="f-pri"><option value="norm" ${g.pri==='norm'?'selected':''}>Standard</option><option value="fat" ${g.pri==='fat'?'selected':''}>FAT priority</option></select></div>
