@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S1430 Crew Schedule</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@500;600;700&display=swap');
+
+  :root{
+    --steel-900:#15181c; --steel-850:#1a1e23; --steel-800:#20252b;
+    --steel-700:#2b323a; --steel-600:#3a434d; --line:#39424c;
+    --ink:#eef2f5; --ink-dim:#9aa7b2; --ink-faint:#6b7883;
+    --hazard:#f5c518; --hazard-deep:#d9a400;
+    --crewA:#4f83cc; --crewB:#5fae7e; --crewC:#c8794a; --crewD:#a97bc4; --crewE:#c9556a;
+    --ok:#5fae7e; --warn:#f5c518; --stop:#c9556a;
+    --col-w:64px;      /* width of one time column (day) */
+    --lane-h:52px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Archivo',system-ui,sans-serif;
+    background:linear-gradient(135deg,#000 0 1px,transparent 1px) 0 0/14px 14px,var(--steel-900);
+    color:var(--ink);font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased;padding-bottom:60px;
+  }
+  .wrap{max-width:1600px;margin:0 auto;padding:0 22px}
+  .hazbar{height:8px;background:repeating-linear-gradient(45deg,var(--hazard) 0 18px,#111 18px 36px)}
+
+  header{padding:24px 0 18px;border-bottom:1px solid var(--line)}
+  .htop{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+  .machine-id{font-family:'Archivo Narrow';font-weight:700;letter-spacing:.5px;color:var(--hazard);font-size:13px}
+  h1{font-size:32px;font-weight:800;letter-spacing:-1px;line-height:1;margin-top:4px}
+  h1 span{color:var(--ink-faint);font-weight:500}
+  .sub{color:var(--ink-dim);font-size:13px;margin-top:8px;max-width:64ch}
+  .metrics{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--steel-850)}
+  .metric{padding:11px 18px;border-right:1px solid var(--line);min-width:104px}
+  .metric:last-child{border-right:none}
+  .metric .n{font-size:28px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1}
+  .metric .l{font-size:10px;color:var(--ink-dim);font-family:'Archivo Narrow';font-weight:600;letter-spacing:.6px;margin-top:5px;text-transform:uppercase}
+  .metric .n.ppc{color:var(--hazard)}
+
+  .shead{display:flex;align-items:center;gap:12px;margin:26px 0 13px;flex-wrap:wrap}
+  .shead h2{font-size:15px;font-weight:700;font-family:'Archivo Narrow';letter-spacing:.5px;text-transform:uppercase}
+  .shead .rule{flex:1;height:1px;background:var(--line);min-width:20px}
+  .shead .hint{font-size:11.5px;color:var(--ink-faint)}
+
+  /* ------- toolbar ------- */
+  .toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .seg button{background:var(--steel-800);border:none;color:var(--ink-dim);padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border-right:1px solid var(--line)}
+  .seg button:last-child{border-right:none}
+  .seg button.on{background:var(--hazard);color:#1a1300}
+  .btn{background:var(--steel-700);border:1px solid var(--line);color:var(--ink);border-radius:5px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap}
+  .btn:hover{border-color:var(--hazard)}
+  .btn.primary{background:var(--hazard);color:#1a1300;border-color:var(--hazard)}
+  .btn.primary:hover{background:var(--hazard-deep)}
+  .btn.ghost{background:none}
+  .dateinput{background:var(--steel-800);border:1px solid var(--line);color:var(--ink);border-radius:5px;padding:6px 10px;font-family:inherit;font-size:12.5px}
+  .save-note{font-size:11px;color:var(--ink-faint);min-width:56px}
+
+  /* ------- timeline ------- */
+  .tl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--steel-850)}
+  .tl{position:relative;min-width:max-content}
+  .tl-head{display:flex;position:sticky;top:0;z-index:5;background:var(--steel-800);border-bottom:2px solid var(--line)}
+  .tl-corner{width:150px;flex:none;padding:9px 12px;border-right:1px solid var(--line);position:sticky;left:0;background:var(--steel-800);z-index:6;font-size:10.5px;color:var(--ink-faint);font-family:'Archivo Narrow';font-weight:700;letter-spacing:.5px;display:flex;align-items:center}
+  .tl-cols{display:flex}
+  .col-h{width:var(--col-w);flex:none;padding:7px 4px;text-align:center;border-right:1px solid var(--line)}
+  .col-h.wk{background:rgba(245,197,24,.05)}
+  .col-h.today{background:rgba(245,197,24,.14)}
+  .col-h.weekend{background:rgba(255,255,255,.02)}
+  .col-h .d1{font-size:10px;color:var(--ink-faint);font-family:'Archivo Narrow';font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .col-h .d2{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:1px}
+  .col-h .d3{font-size:9px;color:var(--ink-faint);margin-top:1px}
+
+  .lane{display:flex;border-bottom:1px solid var(--line);position:relative}
+  .lane:last-child{border-bottom:none}
+  .lane-label{width:150px;flex:none;padding:8px 10px;border-right:1px solid var(--line);position:sticky;left:0;background:var(--steel-850);z-index:3}
+  .lane:nth-child(even) .lane-label{background:#1c2127}
+  .lane-label .cn{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:7px;cursor:pointer}
+  .lane-label .cbadge{width:11px;height:11px;border-radius:2px;flex:none}
+  .lane-label .cn .edit{margin-left:auto;opacity:0;font-size:11px;color:var(--ink-faint)}
+  .lane-label .cn:hover .edit{opacity:1}
+  .lane-label .cmem{font-size:10px;color:var(--ink-dim);margin-top:4px;line-height:1.3}
+  .lane-label .cload{font-size:10px;margin-top:5px;font-variant-numeric:tabular-nums;font-family:'Archivo Narrow';font-weight:600}
+
+  .lane-track{position:relative;flex:1;min-height:var(--lane-h)}
+  .grid-col{position:absolute;top:0;bottom:0;width:var(--col-w);border-right:1px solid rgba(57,66,76,.5)}
+  .grid-col.wk{background:rgba(245,197,24,.03)}
+  .grid-col.weekend{background:rgba(255,255,255,.015)}
+  .grid-col.today{background:rgba(245,197,24,.08)}
+
+  /* ------- gantry bars ------- */
+  .bar{
+    position:absolute;top:7px;height:calc(var(--lane-h) - 14px);border-radius:5px;
+    border-left:4px solid rgba(0,0,0,.35);padding:4px 8px;cursor:grab;user-select:none;
+    display:flex;flex-direction:column;justify-content:center;overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,.3);transition:box-shadow .12s,transform .12s;
+  }
+  .bar:hover{box-shadow:0 5px 16px rgba(0,0,0,.45);z-index:4}
+  .bar:active{cursor:grabbing}
+  .bar.dragging{opacity:.45}
+  .bar .bid{font-weight:800;font-size:12.5px;letter-spacing:-.2px;line-height:1;display:flex;align-items:center;gap:5px;white-space:nowrap}
+  .bar .bscope{font-size:9.5px;opacity:.85;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:2}
+  .bar .bscope b{font-weight:800;opacity:1}
+  .bar .prog{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.22);border-radius:5px 0 0 5px;pointer-events:none;z-index:1;transition:width .35s cubic-bezier(.2,.7,.2,1)}
+  .bar .barbody{position:relative;z-index:2}
+  .bar .bid{position:relative;z-index:2}
+  .bar .tick{background:rgba(0,0,0,.28);font-weight:800;font-size:9px;padding:0 4px;border-radius:2px;margin-left:2px}
+  .bar .fat{background:rgba(0,0,0,.28);font-family:'Archivo Narrow';font-weight:700;font-size:8px;padding:0 4px;border-radius:2px;letter-spacing:.3px}
+  .bar .hold{width:7px;height:7px;border-radius:50%;background:var(--stop);flex:none;box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+  .bar .rz{position:absolute;top:0;bottom:0;width:9px;cursor:ew-resize}
+  .bar .rz.l{left:0} .bar .rz.r{right:0}
+  .addbar{position:absolute;top:50%;transform:translateY(-50%);left:6px;font-size:11px;color:var(--ink-faint);cursor:pointer;padding:3px 8px;border:1px dashed var(--line);border-radius:4px;background:rgba(0,0,0,.15)}
+  .addbar:hover{color:var(--hazard);border-color:var(--hazard)}
+
+  /* ------- constraint log ------- */
+  .clog{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .clog table{border-collapse:collapse;width:100%}
+  .clog th{background:var(--steel-800);text-align:left;padding:9px 12px;font-size:10.5px;font-family:'Archivo Narrow';font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px solid var(--line)}
+  .clog td{padding:8px 12px;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:middle}
+  .clog tr:last-child td{border-bottom:none}
+  .clog tr.done .ctask{text-decoration:line-through;color:var(--ink-faint)}
+  .clog td[contenteditable]{outline:none;border-radius:3px}
+  .clog td[contenteditable]:focus{background:rgba(245,197,24,.08);box-shadow:inset 0 0 0 1px var(--hazard)}
+  .pill{font-size:10px;font-weight:700;font-family:'Archivo Narrow';padding:2px 8px;border-radius:20px;letter-spacing:.3px;white-space:nowrap;cursor:pointer;border:none}
+  .pill.open{background:rgba(245,197,24,.16);color:var(--hazard)}
+  .pill.cleared{background:rgba(95,174,126,.16);color:var(--ok)}
+  .pill.blocked{background:rgba(201,85,106,.18);color:var(--stop)}
+  .xbtn{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:15px;line-height:1;padding:2px 6px;border-radius:4px}
+  .xbtn:hover{color:var(--stop);background:rgba(201,85,106,.12)}
+
+  .legend{display:flex;gap:15px;flex-wrap:wrap;font-size:11px;color:var(--ink-dim);margin-top:10px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+
+  /* ------- modal ------- */
+  .scrim{position:fixed;inset:0;background:rgba(8,10,12,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .scrim.on{display:flex}
+  .modal{background:var(--steel-800);border:1px solid var(--line);border-radius:10px;width:100%;max-width:440px;box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden}
+  .modal h3{font-size:15px;font-weight:700;padding:15px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-family:'Archivo Narrow';letter-spacing:.4px;text-transform:uppercase}
+  .modal .body{padding:16px 18px;display:flex;flex-direction:column;gap:13px;max-height:70vh;overflow:auto}
+  .fld{display:flex;flex-direction:column;gap:5px}
+  .fld label{font-size:10.5px;color:var(--ink-dim);font-family:'Archivo Narrow';font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+  .fld input,.fld select,.fld textarea{background:var(--steel-850);border:1px solid var(--line);color:var(--ink);border-radius:5px;padding:8px 10px;font-family:inherit;font-size:13px}
+  .fld textarea{resize:vertical;min-height:44px}
+  .fld.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .joblist{display:flex;flex-direction:column;gap:5px;max-height:200px;overflow:auto;padding:2px}
+  .jobrow{display:flex;align-items:center;gap:8px}
+  .jobrow input[type=checkbox]{width:17px;height:17px;flex:none;accent-color:var(--hazard);cursor:pointer}
+  .jobrow .jobtext{flex:1;background:var(--steel-850);border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:6px 8px;font-family:inherit;font-size:12.5px}
+  .jobrow.done .jobtext{text-decoration:line-through;color:var(--ink-faint)}
+  .jobadd{display:flex;gap:6px;margin-top:7px}
+  .jobadd input{flex:1;background:var(--steel-850);border:1px solid var(--line);color:var(--ink);border-radius:5px;padding:8px 10px;font-family:inherit;font-size:13px}
+  .swatches{display:flex;gap:7px;flex-wrap:wrap}
+  .swatches i{width:26px;height:26px;border-radius:5px;cursor:pointer;border:2px solid transparent}
+  .swatches i.sel{border-color:var(--ink)}
+  .modal .foot{display:flex;justify-content:space-between;gap:8px;padding:13px 18px;border-top:1px solid var(--line)}
+  .modal .foot .right{display:flex;gap:8px;margin-left:auto}
+
+  footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:var(--ink-faint);font-size:11px;line-height:1.6}
+  ::-webkit-scrollbar{height:11px;width:11px}
+  ::-webkit-scrollbar-track{background:var(--steel-900)}
+  ::-webkit-scrollbar-thumb{background:var(--steel-600);border-radius:6px;border:2px solid var(--steel-900)}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="hazbar"></div>
+<div class="wrap">
+
+  <header>
+    <div class="htop">
+      <div>
+        <div class="machine-id">HERRENKNECHT EPB · SERIAL 1430 · REFURBISHMENT</div>
+        <h1>Crew Schedule <span>/ 11 gantries</span></h1>
+        <div class="sub">Each bar is a gantry on a crew lane. Drag to move dates, drag an edge to resize, click to open its job checklist. Tick jobs off and the bar fills with progress. Switch the timeline between days, weeks and calendar dates.</div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="n" id="m-active">0</div><div class="l">Gantries</div></div>
+        <div class="metric"><div class="n" id="m-done">0</div><div class="l">Jobs complete</div></div>
+        <div class="metric"><div class="n" id="m-hold">0</div><div class="l">On hold</div></div>
+        <div class="metric"><div class="n ppc" id="m-ppc">0%</div><div class="l">Jobs done</div></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="shead">
+    <h2>Timeline</h2><div class="rule"></div>
+    <div class="toolbar">
+      <div class="seg" id="unitSeg">
+        <button data-u="day">Days</button>
+        <button data-u="week">Weeks</button>
+        <button data-u="date" class="on">Dates</button>
+      </div>
+      <label class="save-note" style="color:var(--ink-dim)">Start</label>
+      <input type="date" class="dateinput" id="startDate">
+      <span class="save-note" id="saveNote"></span>
+      <span id="syncDot" title="connecting…" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-faint)"><i style="width:9px;height:9px;border-radius:50%;background:var(--ink-faint);display:inline-block"></i><span id="syncTxt">local</span></span>
+    </div>
+  </div>
+
+  <div class="tl-scroll">
+    <div class="tl" id="tl"></div>
+  </div>
+  <div class="legend" id="legend"></div>
+
+  <div class="shead">
+    <h2>Crews &amp; work</h2><div class="rule"></div>
+    <div class="toolbar">
+      <button class="btn" id="addCrew">+ Crew</button>
+      <button class="btn" id="addGantry">+ Gantry</button>
+      <button class="btn ghost" id="resetBtn">Reset to plan</button>
+    </div>
+  </div>
+  <div class="clog" style="margin-bottom:6px">
+    <table>
+      <thead><tr><th style="width:120px">Crew</th><th>Members</th><th style="width:80px">Capacity</th><th style="width:60px"></th></tr></thead>
+      <tbody id="crewBody"></tbody>
+    </table>
+  </div>
+
+  <div class="shead"><h2>Constraint log</h2><div class="rule"></div><div class="hint">clear blockers before a gantry can advance — Last Planner style</div>
+    <button class="btn" id="addCon">+ Constraint</button>
+  </div>
+  <div class="clog">
+    <table>
+      <thead><tr><th style="width:70px">Gantry</th><th>Constraint / make-ready</th><th style="width:150px">Owner</th><th style="width:96px">Status</th><th style="width:44px"></th></tr></thead>
+      <tbody id="clogBody"></tbody>
+    </table>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<!-- ===== modal ===== -->
+<div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+
+<script>
+/* ============ DATA ============ */
+const CREW_COLORS = ["var(--crewA)","var(--crewB)","var(--crewC)","var(--crewD)","var(--crewE)","#d98cae","#7ec8c3","#c7b24a"];
+
+const DEFAULT_CREWS = [
+  {id:"A", name:"Crew A", color:"var(--crewA)", cap:4, members:"Andy (lead), Leyton"},
+  {id:"B", name:"Crew B", color:"var(--crewB)", cap:3, members:"Chao Pho, Niko, Sitthai"},
+  {id:"C", name:"Crew C", color:"var(--crewC)", cap:3, members:"Stef (lead), Horacio · Cartel cranes"},
+  {id:"D", name:"Crew D", color:"var(--crewD)", cap:2, members:"Nikom + Sitti · Zande (steel)"},
+  {id:"E", name:"Crew E", color:"var(--crewE)", cap:3, members:"Todd + Hayes"},
+];
+// gantries now have start (day index from project start) + dur (days)
+// standard pipe-gantry job list (edit freely per gantry)
+function pipeJobs(extra){
+  const base=[
+    "Strip & inspect","Clean & prep frame",
+    'Replace 4" DW pipe','Replace 3" A pipe','Replace 2" Bent pipe',
+    'Install new runs','Fit components / hydraulics',
+    "Pressure & flush test","FAT & sign-off"
+  ];
+  return (extra? [...base.slice(0,7),...extra,...base.slice(7)] : base)
+    .map((t,i)=>({t,done:false}));
+}
+const DEFAULT_GANTRIES = [
+  {id:"G7", crew:"C", start:0,  dur:20, pri:"fat",  scope:'4"DW/3"A/2"Bent · new 4"/2"/½"', jobs:pipeJobs(["Crane lift set-up"])},
+  {id:"G6", crew:"B", start:0,  dur:20, pri:"fat",  scope:'4"DW/3"A/2"Bent · new 4"/2"DW', jobs:pipeJobs()},
+  {id:"G5", crew:"B", start:0,  dur:20, pri:"fat",  scope:'4"DW/3"A/2"Bent · new 4"/2"DW', jobs:pipeJobs()},
+  {id:"G4", crew:"B", start:20, dur:15, pri:"norm", scope:'4"DW/3"A/2"Bent · Bentonite', jobs:pipeJobs(["Bentonite system fit"])},
+  {id:"G3", crew:"A", start:10, dur:15, pri:"norm", scope:'4"DW/3"A/2"Bent · new 4"/2"DW', jobs:pipeJobs()},
+  {id:"BR2",crew:"D", start:10, dur:15, pri:"norm", scope:'bridge section · pipe + steel', jobs:pipeJobs(["Structural steel mods"])},
+  {id:"G2", crew:"A", start:25, dur:15, pri:"norm", scope:'4"DW/3"A/2"Bent · new 4"/2"DW', jobs:pipeJobs()},
+  {id:"G1", crew:"A", start:40, dur:15, pri:"norm", scope:'cleaning · struct mods · pipe fit', jobs:pipeJobs(["Structural mods"])},
+  {id:"BR1",crew:"A", start:55, dur:20, pri:"norm", scope:'clean · struct mods · large comp · grease',
+    jobs:[{t:"Cleaning",done:false},{t:"Structural mods / work",done:false},{t:"Pipe fitting",done:false},
+          {t:"Large component fitting",done:false},{t:"Grease system install",done:false},
+          {t:"Pressure & flush test",done:false},{t:"FAT & sign-off",done:false}]},
+  {id:"G8", crew:"C", start:30, dur:15, pri:"norm", scope:'4"DW/3"A/2"Bent · new 4"/2"/½"', jobs:pipeJobs(["Crane lift set-up"])},
+  {id:"G9", crew:"C", start:45, dur:15, pri:"norm", scope:'4"DW/3"A/2"Bent · new 4"/2"/½"', jobs:pipeJobs(["Crane lift set-up"])},
+  {id:"QU", crew:"D", start:0,  dur:20, pri:"norm", scope:'Quick Unloader · pipe + steel',
+    jobs:[{t:"Strip & inspect",done:false},{t:"Q/U steel work",done:false},{t:"Pipe replacement",done:false},
+          {t:"Install new runs",done:false},{t:"Pressure & flush test",done:false},{t:"FAT & sign-off",done:false}]},
+];
+const DEFAULT_CONSTRAINTS = [
+  {g:"BR1", task:"Large component + grease system delivery confirmed", owner:"Stefano (SharePoint)", status:"open"},
+  {g:"G4",  task:"Bentonite system pipe spec signed off (HAG)",       owner:"Andy",  status:"open"},
+  {g:"QU",  task:"Q/U steel drawings to Zande (SRL-03-015)",          owner:"Zande", status:"cleared"},
+  {g:"G7",  task:"Crane availability booked with Cartel for lifts",    owner:"Stef",  status:"open"},
+  {g:"BR2", task:"Bridge structural scope confirmed vs S1429",         owner:"Andy",  status:"blocked"},
+];
+
+const TOTAL_DAYS = 84;           // 12-week horizon
+const STORE_KEY = "s1430_sched_v2";
+
+/* ============ Supabase config ============ */
+const SB_URL = "https://mrnrnlhdjdanchzwafwl.supabase.co";
+const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybnJubGhkamRhbmNoendhZndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzg0MDQsImV4cCI6MjA4NzY1NDQwNH0.0xgX3kvU57uLHbvXzRfnXT0aF4JKqRLxLWIUTpAU-0M";
+const BOARD_ID = "s1430";        // the single shared board row
+let sb=null, cloud=false, applyingRemote=false, myTag=Math.random().toString(36).slice(2);
+
+let crews=[], gantries=[], constraints=[], unit="date", startISO=null;
+
+function setSync(state){ // 'live' | 'saving' | 'local' | 'offline'
+  const dot=document.getElementById('syncDot'); if(!dot)return;
+  const i=dot.querySelector('i'), t=document.getElementById('syncTxt');
+  const map={live:['#5fae7e','live'],saving:['#f5c518','saving…'],local:['#6b7883','local only'],offline:['#c9556a','offline']};
+  const [c,txt]=map[state]||map.local; i.style.background=c; t.textContent=txt; dot.title=txt;
+}
+
+function snapshot(){return {crews,gantries,constraints,unit,startISO};}
+function applyData(d){
+  crews=d.crews; gantries=d.gantries; constraints=d.constraints;
+  unit=d.unit||"date"; startISO=d.startISO||defaultStart();
+  gantries.forEach(g=>{if(!Array.isArray(g.jobs))g.jobs=[];});
+}
+
+/* ---- local fallback ---- */
+async function localLoad(){
+  try{const r=await window.storage.get(STORE_KEY);
+    if(r&&r.value){applyData(JSON.parse(r.value));return true;}}catch(e){}
+  return false;
+}
+async function localSave(){try{await window.storage.set(STORE_KEY,JSON.stringify(snapshot()));}catch(e){}}
+
+/* ============ persistence (cloud-first) ============ */
+async function load(){
+  // seed defaults first so we always have something
+  crews=structuredClone(DEFAULT_CREWS);gantries=structuredClone(DEFAULT_GANTRIES);
+  constraints=structuredClone(DEFAULT_CONSTRAINTS);startISO=defaultStart();
+
+  // try cloud
+  try{
+    if(window.supabase && SB_URL && SB_ANON){
+      sb=window.supabase.createClient(SB_URL,SB_ANON,{realtime:{params:{eventsPerSecond:5}}});
+      const {data,error}=await sb.from('sched_boards').select('data').eq('id',BOARD_ID).maybeSingle();
+      if(error) throw error;
+      if(data&&data.data){ applyData(data.data); }
+      else { await sb.from('sched_boards').upsert({id:BOARD_ID,data:snapshot()}); } // first run: seed row
+      cloud=true; setSync('live'); subscribeRealtime();
+      return;
+    }
+  }catch(e){ console.warn('Supabase unavailable, using local storage:',e.message); cloud=false; }
+
+  // fallback: local
+  setSync('local');
+  await localLoad();
+}
+
+function subscribeRealtime(){
+  if(!sb)return;
+  sb.channel('sched_'+BOARD_ID)
+    .on('postgres_changes',{event:'*',schema:'public',table:'sched_boards',filter:'id=eq.'+BOARD_ID},
+      payload=>{
+        const row=payload.new; if(!row||!row.data)return;
+        if(row.tag===myTag)return;              // ignore our own echo
+        applyingRemote=true;
+        applyData(row.data);
+        renderAll();
+        applyingRemote=false;
+        flash('Updated');
+      })
+    .subscribe(status=>{ if(status==='SUBSCRIBED') setSync('live'); });
+}
+
+let saveT, cloudT;
+async function save(){
+  if(applyingRemote) return;                    // don't echo remote changes back
+  // local mirror always (instant + offline safety)
+  localSave();
+  if(cloud && sb){
+    setSync('saving');
+    clearTimeout(cloudT);
+    cloudT=setTimeout(async()=>{
+      try{
+        const {error}=await sb.from('sched_boards').upsert({id:BOARD_ID,data:snapshot(),tag:myTag,updated_at:new Date().toISOString()});
+        if(error) throw error;
+        setSync('live'); flash('Saved ✓');
+      }catch(e){ console.warn('cloud save failed',e.message); setSync('offline'); flash('Saved locally'); }
+    },400);                                      // debounce rapid edits (dragging)
+  }else{
+    flash('Saved ✓');
+  }
+}
+function flash(msg){
+  const el=document.getElementById('saveNote'); if(!el)return;
+  el.textContent=msg; clearTimeout(saveT); saveT=setTimeout(()=>el.textContent="",1500);
+}
+function defaultStart(){const d=new Date();d.setHours(0,0,0,0);const day=d.getDay();d.setDate(d.getDate()-((day+6)%7));return d.toISOString().slice(0,10);} // back to Monday
+
+/* ============ date helpers ============ */
+function projStart(){const d=new Date(startISO+"T00:00:00");return d;}
+function dateForDay(i){const d=projStart();d.setDate(d.getDate()+i);return d;}
+function dayIndexToday(){const t=new Date();t.setHours(0,0,0,0);return Math.round((t-projStart())/86400000);}
+const DOW=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/* ============ column model ============ */
+// returns array of columns: {label lines, dayStart, span(days), classes}
+function columns(){
+  const cols=[];
+  if(unit==="day"||unit==="date"){
+    for(let i=0;i<TOTAL_DAYS;i++){
+      const dt=dateForDay(i);const dow=(dt.getDay()+6)%7;
+      cols.push({start:i,span:1,
+        d1: unit==="date"?DOW[dow]:(i%7===0?("W"+(i/7+1)):""),
+        d2: unit==="date"?dt.getDate():(i+1),
+        d3: unit==="date"?MON[dt.getMonth()]:"",
+        weekend: dow>=5, wk:i%7===0, today:i===dayIndexToday()});
+    }
+  }else{ // week
+    for(let w=0;w<TOTAL_DAYS/7;w++){
+      const dt=dateForDay(w*7);
+      cols.push({start:w*7,span:7,d1:"Week",d2:w+1,d3:dt.getDate()+" "+MON[dt.getMonth()],wk:true,
+        today: dayIndexToday()>=w*7 && dayIndexToday()<w*7+7});
+    }
+  }
+  return cols;
+}
+function colWidth(){return unit==="week"?150: unit==="day"?52:64;}
+
+/* ============ render timeline ============ */
+function renderTimeline(){
+  const cw=colWidth();document.documentElement.style.setProperty('--col-w',cw+'px');
+  const cols=columns();const tl=document.getElementById('tl');tl.innerHTML="";
+  const totalW=cols.reduce((a,c)=>a+ (c.span/(unit==="week"?7:1))*cw,0);
+
+  // header
+  const head=document.createElement('div');head.className='tl-head';
+  const corner=document.createElement('div');corner.className='tl-corner';corner.textContent="CREW ↓ / TIME →";
+  head.appendChild(corner);
+  const colsWrap=document.createElement('div');colsWrap.className='tl-cols';
+  cols.forEach(c=>{
+    const ch=document.createElement('div');ch.className='col-h'+(c.weekend?' weekend':'')+(c.wk?' wk':'')+(c.today?' today':'');
+    ch.style.width=(unit==="week"?cw:cw)+'px';
+    ch.innerHTML=`<div class="d1">${c.d1||''}</div><div class="d2">${c.d2}</div><div class="d3">${c.d3||''}</div>`;
+    colsWrap.appendChild(ch);
+  });
+  head.appendChild(colsWrap);tl.appendChild(head);
+
+  const pxPerDay = unit==="week"? cw/7 : cw;
+
+  crews.forEach((crew,ci)=>{
+    const lane=document.createElement('div');lane.className='lane';
+    const lbl=document.createElement('div');lbl.className='lane-label';
+    const active=gantries.filter(g=>g.crew===crew.id).length;
+    const over=active>crew.cap;
+    lbl.innerHTML=`<div class="cn" data-crew="${crew.id}"><span class="cbadge" style="background:${crew.color}"></span>${crew.name}<span class="edit">edit</span></div>
+      <div class="cmem">${crew.members||''}</div>
+      <div class="cload" style="color:${over?'var(--stop)':'var(--ink-faint)'}">${active} / ${crew.cap} gantries${over?' ⚠':''}</div>`;
+    lbl.querySelector('.cn').addEventListener('click',()=>editCrew(crew.id));
+    lane.appendChild(lbl);
+
+    const track=document.createElement('div');track.className='lane-track';track.style.width=totalW+'px';
+    track.dataset.crew=crew.id;
+    // grid
+    cols.forEach(c=>{
+      const gc=document.createElement('div');gc.className='grid-col'+(c.weekend?' weekend':'')+(c.wk?' wk':'')+(c.today?' today':'');
+      gc.style.left=(c.start*pxPerDay)+'px';gc.style.width=(c.span*pxPerDay)+'px';
+      track.appendChild(gc);
+    });
+    // bars
+    gantries.filter(g=>g.crew===crew.id).forEach(g=>track.appendChild(makeBar(g,crew,pxPerDay)));
+    // add hint if empty
+    if(active===0){const a=document.createElement('div');a.className='addbar';a.textContent="+ add gantry";a.onclick=()=>addGantry(crew.id);track.appendChild(a);}
+    lane.appendChild(track);tl.appendChild(lane);
+  });
+}
+
+function makeBar(g,crew,pxPerDay){
+  const b=document.createElement('div');b.className='bar';b.style.touchAction='none';
+  b.style.left=(g.start*pxPerDay)+'px';
+  b.style.width=Math.max(g.dur*pxPerDay-3,26)+'px';
+  b.style.background=crew.color;b.style.color=pickText(crew.color);
+  const hasHold=constraints.some(x=>x.g===g.id&&x.status!=='cleared');
+  const jt=(g.jobs||[]).length, jd=(g.jobs||[]).filter(j=>j.done).length;
+  const pct=jt?Math.round(jd/jt*100):0;
+  const allDone = jt>0 && jd===jt;
+  b.innerHTML=`
+    <div class="prog" style="width:${pct}%"></div>
+    <div class="barbody">
+      <div class="bid">${hasHold?'<span class="hold"></span>':''}${g.id}${g.pri==='fat'?'<span class="fat">FAT</span>':''}${allDone?'<span class="tick">✓</span>':''}</div>
+      <div class="bscope">${g.scope||''}${jt?` · <b>${jd}/${jt} jobs</b>`:''}</div>
+    </div>
+    <div class="rz l"></div><div class="rz r"></div>`;
+  attachDrag(b,g,crew);
+  return b;
+}
+function pickText(c){ // dark text on light crew colours
+  const light=["var(--crewB)","var(--crewC)","#d98cae","#7ec8c3","#c7b24a","var(--hazard)"];
+  return light.includes(c)?'#12140f':'#f4f8fb';
+}
+
+/* ============ drag + resize ============ */
+function attachDrag(b,g,crew){
+  let mode=null,sx=0,ox=0,od=0,pxDay=0,changed=false;
+  b.addEventListener('pointerdown',e=>{
+    if(e.button)return;
+    pxDay = unit==="week"?colWidth()/7:colWidth();
+    const rz=e.target.closest('.rz');
+    mode = rz? (rz.classList.contains('l')?'left':'right') : 'move';
+    sx=e.clientX;ox=g.start;od=g.dur;b._moved=false;changed=false;
+    b.setPointerCapture(e.pointerId);b.classList.add('dragging');
+    e.stopPropagation();
+  });
+  b.addEventListener('pointermove',e=>{
+    if(!mode)return;
+    const dd=Math.round((e.clientX-sx)/pxDay);
+    if(Math.abs(e.clientX-sx)>4)b._moved=true;
+    if(!b._moved)return;                       // ignore micro-jitter so taps still register
+    changed=true;
+    if(mode==='move'){g.start=clamp(ox+dd,0,TOTAL_DAYS-1);}
+    else if(mode==='left'){const ns=clamp(ox+dd,0,ox+od-1);g.dur=od+(ox-ns);g.start=ns;}
+    else{g.dur=clamp(od+dd,1,TOTAL_DAYS-g.start);}
+    const px=unit==="week"?colWidth()/7:colWidth();
+    b.style.left=(g.start*px)+'px';b.style.width=Math.max(g.dur*px-3,26)+'px';
+  });
+  b.addEventListener('pointerup',e=>{
+    if(!mode)return;
+    const wasMove=mode;mode=null;b.classList.remove('dragging');
+    try{b.releasePointerCapture(e.pointerId);}catch(_){}
+    // TAP (no movement) -> open editor. Do this on a fresh frame so it isn't torn down mid-handler.
+    if(!b._moved){setTimeout(()=>editGantry(g.id),0);return;}
+    // real drag: check for crew-lane change, then re-render
+    const track=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.lane-track');
+    if(track&&track.dataset.crew&&track.dataset.crew!==g.crew){g.crew=track.dataset.crew;changed=true;}
+    if(changed){renderAll();save();}
+  });
+  b.addEventListener('pointercancel',()=>{mode=null;b.classList.remove('dragging');});
+}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* ============ metrics ============ */
+function renderMetrics(){
+  const total=gantries.length;
+  const hold=new Set(constraints.filter(c=>c.status!=='cleared').map(c=>c.g)).size;
+  // gantries with all jobs done
+  const complete=gantries.filter(g=>(g.jobs||[]).length>0 && g.jobs.every(j=>j.done)).length;
+  // overall job completion across the machine
+  let jt=0,jd=0;gantries.forEach(g=>{(g.jobs||[]).forEach(j=>{jt++;if(j.done)jd++;});});
+  const pct=jt?Math.round(jd/jt*100):0;
+  document.getElementById('m-active').textContent=total;
+  document.getElementById('m-done').textContent=complete;
+  document.getElementById('m-hold').textContent=hold;
+  document.getElementById('m-ppc').textContent=pct+'%';
+}
+
+/* ============ crews table ============ */
+function renderCrewTable(){
+  const b=document.getElementById('crewBody');b.innerHTML="";
+  crews.forEach(c=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="cbadge" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${c.color};margin-right:7px"></span><strong>${c.name}</strong></td>
+      <td>${c.members||''}</td><td>${c.cap}</td>
+      <td style="display:flex;gap:2px"><button class="xbtn" title="Edit" data-e="${c.id}">✎</button><button class="xbtn" title="Delete" data-d="${c.id}">✕</button></td>`;
+    b.appendChild(tr);
+  });
+  b.querySelectorAll('[data-e]').forEach(x=>x.onclick=()=>editCrew(x.dataset.e));
+  b.querySelectorAll('[data-d]').forEach(x=>x.onclick=()=>delCrew(x.dataset.d));
+}
+
+/* ============ constraints ============ */
+function renderClog(){
+  const b=document.getElementById('clogBody');b.innerHTML="";
+  constraints.forEach((c,i)=>{
+    const tr=document.createElement('tr');if(c.status==='cleared')tr.className='done';
+    const next={open:'cleared',cleared:'blocked',blocked:'open'};
+    const label={open:'Open',cleared:'Cleared',blocked:'Blocked'};
+    tr.innerHTML=`<td contenteditable data-f="g" data-i="${i}"><strong>${c.g}</strong></td>
+      <td contenteditable class="ctask" data-f="task" data-i="${i}">${c.task}</td>
+      <td contenteditable data-f="owner" data-i="${i}">${c.owner}</td>
+      <td><button class="pill ${c.status}" data-cy="${i}">${label[c.status]}</button></td>
+      <td><button class="xbtn" data-cd="${i}">✕</button></td>`;
+    b.appendChild(tr);
+  });
+  b.querySelectorAll('[contenteditable]').forEach(td=>{
+    td.addEventListener('blur',()=>{const i=+td.dataset.i,f=td.dataset.f;constraints[i][f]=td.innerText.trim();save();});
+    td.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();td.blur();}});
+  });
+  b.querySelectorAll('[data-cy]').forEach(x=>x.onclick=()=>{const i=+x.dataset.cy;const nx={open:'cleared',cleared:'blocked',blocked:'open'};constraints[i].status=nx[constraints[i].status];renderAll();save();});
+  b.querySelectorAll('[data-cd]').forEach(x=>x.onclick=()=>{constraints.splice(+x.dataset.cd,1);renderAll();save();});
+}
+
+/* ============ legend ============ */
+function renderLegend(){
+  document.getElementById('legend').innerHTML =
+    crews.map(c=>`<span><i style="background:${c.color}"></i>${c.name}</span>`).join('')
+    + `<span><i style="background:var(--hazard)"></i>FAT priority</span>`
+    + `<span><i style="background:var(--stop);border-radius:50%"></i>has open hold</span>`;
+}
+
+function renderAll(){renderTimeline();renderMetrics();renderCrewTable();renderClog();renderLegend();}
+
+/* ============ MODAL editor ============ */
+const scrim=document.getElementById('scrim'),modal=document.getElementById('modal');
+function openModal(html){modal.innerHTML=html;scrim.classList.add('on');}
+function closeModal(){scrim.classList.remove('on');}
+scrim.addEventListener('click',e=>{if(e.target===scrim)closeModal();});
+
+function editGantry(id){
+  const g=gantries.find(x=>x.id===id);if(!g)return;
+  const startDate=dateForDay(g.start),endDate=dateForDay(g.start+g.dur-1);
+  openModal(`
+    <h3>Edit gantry <span style="color:var(--hazard)">${g.id}</span></h3>
+    <div class="body">
+      <div class="fld"><label>Gantry name / ID</label><input id="f-id" value="${g.id}"></div>
+      <div class="fld"><label>Scope</label><textarea id="f-scope">${g.scope||''}</textarea></div>
+      <div class="fld row2">
+        <div class="fld"><label>Crew</label><select id="f-crew">${crews.map(c=>`<option value="${c.id}" ${c.id===g.crew?'selected':''}>${c.name}</option>`).join('')}</select></div>
+        <div class="fld"><label>Priority</label><select id="f-pri"><option value="norm" ${g.pri==='norm'?'selected':''}>Standard</option><option value="fat" ${g.pri==='fat'?'selected':''}>FAT priority</option></select></div>
+      </div>
+      <div class="fld row2">
+        <div class="fld"><label>Start date</label><input type="date" id="f-start" value="${startDate.toISOString().slice(0,10)}"></div>
+        <div class="fld"><label>Duration (days)</label><input type="number" min="1" id="f-dur" value="${g.dur}"></div>
+      </div>
+      <div class="fld">
+        <label>Jobs checklist <span id="jobcount" style="color:var(--hazard)"></span></label>
+        <div class="joblist" id="joblist"></div>
+        <div class="jobadd"><input id="f-newjob" placeholder="Add a job and press Enter…"><button class="btn" id="f-addjob">Add</button></div>
+      </div>
+    </div>
+    <div class="foot">
+      <button class="btn ghost" id="f-del" style="color:var(--stop)">Delete</button>
+      <div class="right"><button class="btn" id="f-cancel">Cancel</button><button class="btn primary" id="f-save">Save</button></div>
+    </div>`);
+  // ----- jobs checklist wiring -----
+  if(!Array.isArray(g.jobs))g.jobs=[];
+  function drawJobs(){
+    const wrap=document.getElementById('joblist');wrap.innerHTML="";
+    const done=g.jobs.filter(j=>j.done).length;
+    document.getElementById('jobcount').textContent = g.jobs.length? `${done}/${g.jobs.length} done`:'';
+    g.jobs.forEach((j,idx)=>{
+      const row=document.createElement('div');row.className='jobrow'+(j.done?' done':'');
+      row.innerHTML=`<input type="checkbox" ${j.done?'checked':''} data-jc="${idx}">
+        <input class="jobtext" value="${(j.t||'').replace(/"/g,'&quot;')}" data-jt="${idx}">
+        <button class="xbtn" data-jx="${idx}">✕</button>`;
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll('[data-jc]').forEach(cb=>cb.onchange=()=>{
+      const i=+cb.dataset.jc;g.jobs[i].done=cb.checked;
+      cb.closest('.jobrow').classList.toggle('done',cb.checked);
+      const done=g.jobs.filter(j=>j.done).length;
+      document.getElementById('jobcount').textContent = g.jobs.length? `${done}/${g.jobs.length} done`:'';
+      save();
+    });
+    wrap.querySelectorAll('[data-jt]').forEach(tx=>{
+      tx.onblur=()=>{g.jobs[+tx.dataset.jt].t=tx.value.trim();save();};
+      tx.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();tx.blur();}};
+    });
+    wrap.querySelectorAll('[data-jx]').forEach(x=>x.onclick=()=>{g.jobs.splice(+x.dataset.jx,1);drawJobs();save();});
+  }
+  function addJob(){
+    const inp=document.getElementById('f-newjob');const v=inp.value.trim();if(!v)return;
+    g.jobs.push({t:v,done:false});inp.value="";drawJobs();save();inp.focus();
+  }
+  document.getElementById('f-addjob').onclick=addJob;
+  document.getElementById('f-newjob').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addJob();}};
+  drawJobs();
+  document.getElementById('f-cancel').onclick=closeModal;
+  document.getElementById('f-del').onclick=()=>{gantries=gantries.filter(x=>x!==g);closeModal();renderAll();save();};
+  document.getElementById('f-save').onclick=()=>{
+    g.id=document.getElementById('f-id').value.trim()||g.id;
+    g.scope=document.getElementById('f-scope').value.trim();
+    g.crew=document.getElementById('f-crew').value;
+    g.pri=document.getElementById('f-pri').value;
+    const sd=document.getElementById('f-start').value;
+    if(sd){g.start=clamp(Math.round((new Date(sd+"T00:00:00")-projStart())/86400000),0,TOTAL_DAYS-1);}
+    g.dur=clamp(+document.getElementById('f-dur').value||g.dur,1,TOTAL_DAYS-g.start);
+    closeModal();renderAll();save();
+  };
+}
+function addGantry(crewId){
+  const id="G?"+(gantries.length+1);
+  const g={id:id,crew:crewId||crews[0].id,start:dayIndexToday()>0?dayIndexToday():0,dur:10,pri:"norm",scope:""};
+  gantries.push(g);renderAll();save();editGantry(g.id);
+}
+function editCrew(id){
+  const c=crews.find(x=>x.id===id);if(!c)return;
+  openModal(`
+    <h3>Edit ${c.name}</h3>
+    <div class="body">
+      <div class="fld"><label>Crew name</label><input id="c-name" value="${c.name}"></div>
+      <div class="fld"><label>Members</label><input id="c-mem" value="${c.members||''}"></div>
+      <div class="fld"><label>Capacity (gantries at once)</label><input type="number" min="1" id="c-cap" value="${c.cap}"></div>
+      <div class="fld"><label>Lane colour</label><div class="swatches" id="c-sw">${CREW_COLORS.map(col=>`<i data-col="${col}" class="${col===c.color?'sel':''}" style="background:${col}"></i>`).join('')}</div></div>
+    </div>
+    <div class="foot">
+      <button class="btn ghost" id="c-del" style="color:var(--stop)">Delete</button>
+      <div class="right"><button class="btn" id="c-cancel">Cancel</button><button class="btn primary" id="c-save">Save</button></div>
+    </div>`);
+  let pick=c.color;
+  modal.querySelectorAll('#c-sw i').forEach(s=>s.onclick=()=>{pick=s.dataset.col;modal.querySelectorAll('#c-sw i').forEach(x=>x.classList.remove('sel'));s.classList.add('sel');});
+  document.getElementById('c-cancel').onclick=closeModal;
+  document.getElementById('c-del').onclick=()=>{delCrew(id);closeModal();};
+  document.getElementById('c-save').onclick=()=>{
+    c.name=document.getElementById('c-name').value.trim()||c.name;
+    c.members=document.getElementById('c-mem').value.trim();
+    c.cap=+document.getElementById('c-cap').value||c.cap;c.color=pick;
+    closeModal();renderAll();save();
+  };
+}
+function delCrew(id){
+  if(gantries.some(g=>g.crew===id)){if(!confirm("This crew has gantries assigned. Delete anyway? Their gantries will move to the first crew."))return;
+    const fallback=crews.find(c=>c.id!==id);gantries.forEach(g=>{if(g.crew===id)g.crew=fallback.id;});}
+  crews=crews.filter(c=>c.id!==id);renderAll();save();
+}
+function addCrew(){
+  const letter=String.fromCharCode(65+crews.length);
+  const c={id:"c"+Date.now().toString(36),name:"Crew "+letter,color:CREW_COLORS[crews.length%CREW_COLORS.length],cap:3,members:""};
+  crews.push(c);renderAll();save();editCrew(c.id);
+}
+function addConstraint(){
+  constraints.push({g:gantries[0]?.id||"—",task:"New make-ready item",owner:"",status:"open"});
+  renderAll();save();
+}
+
+/* ============ controls ============ */
+document.getElementById('unitSeg').addEventListener('click',e=>{
+  const btn=e.target.closest('button');if(!btn)return;
+  unit=btn.dataset.u;
+  document.querySelectorAll('#unitSeg button').forEach(b=>b.classList.toggle('on',b===btn));
+  renderTimeline();save();
+});
+document.getElementById('startDate').addEventListener('change',e=>{
+  if(e.target.value){startISO=e.target.value;renderAll();save();}
+});
+document.getElementById('addCrew').onclick=addCrew;
+document.getElementById('addGantry').onclick=()=>addGantry();
+document.getElementById('addCon').onclick=addConstraint;
+document.getElementById('resetBtn').onclick=async()=>{
+  if(!confirm('Reset the shared board to the original plan for everyone? This overwrites the current board.'))return;
+  crews=structuredClone(DEFAULT_CREWS);gantries=structuredClone(DEFAULT_GANTRIES);
+  constraints=structuredClone(DEFAULT_CONSTRAINTS);startISO=defaultStart();unit="date";
+  document.querySelectorAll('#unitSeg button').forEach(b=>b.classList.toggle('on',b.dataset.u==='date'));
+  document.getElementById('startDate').value=startISO;renderAll();save();
+};
+
+document.getElementById('foot').innerHTML=
+  "Timeline schedule: each bar is a gantry on a crew lane. Drag a bar to move its dates, drag either edge to change duration, drag to another lane to reassign crew, tap to open its job checklist. "+
+  "Switch Days / Weeks / Dates, and set the project start date. Add or delete crews, gantries and constraints. "+
+  "This is a shared live board — everyone with the link edits the same schedule and changes sync between devices (green dot = live). It falls back to this device's storage if it can't reach the server. "+
+  "Crew structure and pipe specs are from the site notes (Hogan); dates and durations are planning inputs — adjust to the real program.";
+
+(async function(){
+  await load();
+  document.getElementById('startDate').value=startISO;
+  document.querySelectorAll('#unitSeg button').forEach(b=>b.classList.toggle('on',b.dataset.u===unit));
+  renderAll();
+})();
+</script>
+</body>
+</html>
