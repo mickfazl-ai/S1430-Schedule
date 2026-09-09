@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S1430 · Crew QR Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap');
+  :root{
+    --steel-900:#15181c;--steel-850:#1a1e23;--steel-800:#20252b;--steel-700:#2b323a;--steel-600:#3a434d;--line:#39424c;
+    --ink:#eef2f5;--ink-dim:#9aa7b2;--ink-faint:#6b7883;--hazard:#f5c518;--hazard-deep:#d9a400;--wait:#c9556a;--done:#5fae7e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Archivo',system-ui,sans-serif;background:linear-gradient(135deg,#000 0 1px,transparent 1px) 0 0/14px 14px,var(--steel-900);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;padding-bottom:50px}
+  .hazbar{height:8px;background:repeating-linear-gradient(45deg,var(--hazard) 0 18px,#111 18px 36px)}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 18px}
+  header{padding:22px 0 16px;border-bottom:1px solid var(--line)}
+  .machine-id{font-family:'Archivo Narrow';font-weight:700;letter-spacing:.5px;color:var(--hazard);font-size:13px}
+  h1{font-size:28px;font-weight:800;letter-spacing:-1px;margin-top:4px}
+  .nav{display:flex;gap:8px;margin-top:12px}
+  .nav a{text-decoration:none;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:6px;border:1px solid var(--line);color:var(--ink-dim);background:var(--steel-800)}
+  .nav a.on{background:var(--hazard);color:#1a1300;border-color:var(--hazard)}
+  .sub{color:var(--ink-dim);font-size:13px;margin-top:10px;max-width:70ch}
+  #syncDot{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-faint);margin-left:8px}
+  #syncDot i{width:9px;height:9px;border-radius:50%;background:var(--ink-faint)}
+
+  .shead{display:flex;align-items:center;gap:12px;margin:24px 0 14px}
+  .shead h2{font-size:15px;font-weight:700;font-family:'Archivo Narrow';letter-spacing:.5px;text-transform:uppercase}
+  .shead .rule{flex:1;height:1px;background:var(--line)}
+  .btn{background:var(--steel-700);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn:hover{border-color:var(--hazard)}
+  .btn.primary{background:var(--hazard);color:#1a1300;border-color:var(--hazard)}
+
+  /* add form */
+  .addcard{background:var(--steel-850);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .frow{display:grid;grid-template-columns:1.2fr 1fr .8fr 1fr auto;gap:12px;align-items:end}
+  .fld{display:flex;flex-direction:column;gap:5px}
+  .fld label{font-size:10.5px;color:var(--ink-dim);font-family:'Archivo Narrow';font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+  .fld input,.fld select{background:var(--steel-800);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:9px 11px;font-family:inherit;font-size:14px}
+  .fld input.code{text-transform:uppercase;letter-spacing:2px;font-weight:700}
+  .swatches{display:flex;gap:6px}
+  .swatches i{width:26px;height:26px;border-radius:6px;cursor:pointer;border:2px solid transparent}
+  .swatches i.sel{border-color:var(--ink)}
+  .formmsg{font-size:12px;margin-top:10px;min-height:16px}
+  .formmsg.err{color:var(--wait)} .formmsg.ok{color:var(--done)}
+
+  /* crew grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:6px}
+  .qcard{background:#fff;border-radius:10px;overflow:hidden;text-align:center;color:#111;border:1px solid var(--line)}
+  .qcard .bar{color:#fff;font-weight:800;font-size:17px;padding:9px;display:flex;justify-content:space-between;align-items:center}
+  .qcard .bar .lane{font-size:10px;opacity:.85;font-weight:700;background:rgba(255,255,255,.25);padding:1px 7px;border-radius:20px}
+  .qcard .qr{padding:14px 0 6px;display:flex;justify-content:center}
+  .qcard .qr img,.qcard .qr canvas{width:170px;height:170px}
+  .qcard .code{font-size:24px;font-weight:800;letter-spacing:3px;margin:2px 0 4px}
+  .qcard .hint{font-size:10px;color:#666;padding:0 10px 10px;line-height:1.35}
+  .qcard .acts{display:flex;border-top:1px solid #ddd}
+  .qcard .acts button{flex:1;border:none;background:#f4f4f4;color:#333;padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border-right:1px solid #ddd}
+  .qcard .acts button:last-child{border-right:none}
+  .qcard .acts button:hover{background:#e8e8e8}
+  .qcard .acts .del:hover{background:#fde;color:#c00}
+
+  .empty{color:var(--ink-faint);padding:30px;text-align:center}
+
+  /* print */
+  @media print{
+    @page{margin:12mm}
+    *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+    body{background:#fff;padding:0}
+    .hazbar,header,.shead,.addcard,.noprint{display:none !important}
+    .wrap{max-width:100%}
+    .grid{grid-template-columns:1fr 1fr;gap:16px}
+    .qcard{border:2px solid #222;break-inside:avoid}
+    .qcard .acts{display:none}
+  }
+  /* edit modal */
+  .scrim{position:fixed;inset:0;background:rgba(8,10,12,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .scrim.on{display:flex}
+  .modal{background:var(--steel-800);border:1px solid var(--line);border-radius:10px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden}
+  .modal h3{font-size:14px;font-weight:700;padding:14px 18px;border-bottom:1px solid var(--line);font-family:'Archivo Narrow';letter-spacing:.4px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+  .modal .sc-close{background:none;border:none;color:var(--ink-dim);font-size:20px;cursor:pointer;line-height:1}
+  .modal .mbody{padding:16px 18px;display:flex;flex-direction:column;gap:13px}
+  .modal .mfoot{display:flex;gap:9px;justify-content:flex-end;padding:13px 18px;border-top:1px solid var(--line)}
+  .codelock{font-size:12px;color:var(--ink-faint);background:var(--steel-850);border:1px solid var(--line);border-radius:6px;padding:9px 11px;letter-spacing:2px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="hazbar"></div>
+<div class="wrap">
+  <header>
+    <div class="machine-id">HERRENKNECHT S-1430 · CREW QR ADMIN</div>
+    <h1>Crew Codes &amp; QR Generator <span id="syncDot"><i></i><span id="syncTxt">local</span></span></h1>
+    <div class="nav">
+      <a href="index.html">Schedule</a>
+      <a href="hitlist.html">Hitlist</a>
+      <a href="crew_admin.html" class="on">Crew QR Admin</a>
+    </div>
+    <div class="sub">Add a crew with its own code and QR. Codes save to the database so crews can sign in at the crew page straight away. Each crew maps to a schedule lane so they see that lane's jobs.</div>
+  </header>
+
+  <div class="shead"><h2>Add a crew</h2><div class="rule"></div></div>
+  <div class="addcard noprint">
+    <div class="frow">
+      <div class="fld"><label>Crew name</label><input id="a-name" placeholder="e.g. Crew F"></div>
+      <div class="fld"><label>Code (typed to sign in)</label><input id="a-code" class="code" placeholder="e.g. 1430F" maxlength="12"></div>
+      <div class="fld"><label>Schedule lane</label><select id="a-lane"></select></div>
+      <div class="fld"><label>Members (optional)</label><input id="a-members" placeholder="names"></div>
+      <div class="fld"><label>&nbsp;</label><button class="btn primary" id="a-add">Add crew</button></div>
+    </div>
+    <div class="formmsg" id="a-msg"></div>
+  </div>
+
+  <div class="shead"><h2>Crews</h2><div class="rule"></div>
+    <button class="btn noprint" id="printAll">🖨 Print all QR codes</button>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="scrim" id="editScrim"><div class="modal">
+  <h3><span>Edit crew</span><button class="sc-close" id="e-close">✕</button></h3>
+  <div class="mbody">
+    <div class="fld"><label>Code (fixed — scanned by crew)</label><div class="codelock" id="e-code"></div></div>
+    <div class="fld"><label>Crew name</label><input id="e-name"></div>
+    <div class="fld"><label>Schedule lane</label><select id="e-lane"></select></div>
+    <div class="fld"><label>Members</label><input id="e-members" placeholder="names"></div>
+    <div class="formmsg" id="e-msg"></div>
+  </div>
+  <div class="mfoot">
+    <button class="btn" id="e-cancel">Cancel</button>
+    <button class="btn primary" id="e-save">Save changes</button>
+  </div>
+</div></div>
+
+<script>
+const SB_URL="https://mrnrnlhdjdanchzwafwl.supabase.co";
+const SB_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybnJubGhkamRhbmNoendhZndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzg0MDQsImV4cCI6MjA4NzY1NDQwNH0.0xgX3kvU57uLHbvXzRfnXT0aF4JKqRLxLWIUTpAU-0M";
+const BOARD_ID="s1430";
+// base URL for the crew page — auto-detected from where this admin page is served
+const CREW_URL = location.origin + location.pathname.replace(/crew_admin\.html$/,'crew.html');
+const LANE_COLORS={A:"#4f83cc",B:"#5fae7e",C:"#c8794a",D:"#a97bc4",E:"#c9556a",F:"#d98cae",G:"#7ec8c3",H:"#c7b24a"};
+const LANES=["A","B","C","D","E","F","G","H"];
+
+let sb=null, crews=[], boardCrews=[];
+
+function setSync(s){const d=document.getElementById('syncDot'),i=d.querySelector('i'),t=document.getElementById('syncTxt');
+  const m={live:['#5fae7e','live'],saving:['#f5c518','saving…'],local:['#6b7883','offline']};const[c,x]=m[s]||m.local;i.style.background=c;t.textContent=x;}
+function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+async function init(){
+  if(window.supabase) sb=window.supabase.createClient(SB_URL,SB_ANON);
+  // lanes from the live board if possible
+  try{
+    const {data}=await sb.from('sched_boards').select('data').eq('id',BOARD_ID).maybeSingle();
+    if(data&&data.data&&Array.isArray(data.data.crews)) boardCrews=data.data.crews;
+  }catch(e){}
+  fillLaneSelect();
+  await loadCrews();
+}
+function fillLaneSelect(){
+  const sel=document.getElementById('a-lane');
+  // offer board lanes first (with names), then plain A-H
+  const opts=[];
+  boardCrews.forEach(c=>opts.push(`<option value="${c.id}">${esc(c.id)} — ${esc(c.name||'')}</option>`));
+  LANES.forEach(l=>{ if(!boardCrews.some(c=>c.id===l)) opts.push(`<option value="${l}">${l} (new lane)</option>`); });
+  sel.innerHTML=opts.join('');
+}
+async function loadCrews(){
+  try{
+    const {data,error}=await sb.from('sched_crew_codes').select('*').order('code');
+    if(error)throw error; crews=data||[]; setSync('live');
+  }catch(e){ console.warn(e); setSync('local'); }
+  render();
+}
+
+function render(){
+  const g=document.getElementById('grid');
+  if(!crews.length){g.innerHTML='<div class="empty">No crews yet — add one above.</div>';return;}
+  g.innerHTML='';
+  crews.forEach((c,idx)=>{
+    const lane=c.crew_id||'?';
+    const col=LANE_COLORS[lane]||'#555';
+    const card=document.createElement('div');card.className='qcard';
+    card.innerHTML=`
+      <div class="bar" style="background:${col}"><span>${esc(c.crew_name||('Crew '+lane))}</span><span class="lane">Lane ${esc(lane)}</span></div>
+      <div class="qr" id="qrh-${idx}"></div>
+      <div class="code">${esc(c.code)}</div>
+      <div class="hint">Scan or enter this code at<br>${esc(CREW_URL.replace(/^https?:\/\//,''))}</div>
+      <div class="acts noprint">
+        <button data-edit="${idx}">Edit</button>
+        <button data-copy="${esc(c.code)}">Copy link</button>
+        <button class="del" data-del="${esc(c.code)}">Delete</button>
+      </div>`;
+    g.appendChild(card);
+    const holder=card.querySelector('#qrh-'+idx);
+    if(typeof QRCode!=='undefined'){
+      try{ new QRCode(holder,{text:CREW_URL+'?code='+encodeURIComponent(c.code),width:170,height:170,correctLevel:QRCode.CorrectLevel.M}); }
+      catch(e){ holder.innerHTML='<div style="padding:30px;color:#888;font-size:12px">QR unavailable</div>'; }
+    }else{
+      holder.innerHTML='<div style="padding:30px;color:#888;font-size:12px">QR loading… refresh if this stays</div>';
+    }
+  });
+  g.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>delCrew(b.dataset.del));
+  g.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEdit(+b.dataset.edit));
+  g.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{navigator.clipboard.writeText(CREW_URL+'?code='+b.dataset.copy);b.textContent='Copied!';setTimeout(()=>b.textContent='Copy link',1200);});
+}
+function cssEsc(s){return String(s).replace(/[^a-zA-Z0-9_-]/g,'\\$&');}
+
+async function addCrew(){
+  const name=document.getElementById('a-name').value.trim();
+  const code=document.getElementById('a-code').value.trim().toUpperCase();
+  const lane=document.getElementById('a-lane').value;
+  const members=document.getElementById('a-members').value.trim();
+  const msg=document.getElementById('a-msg');
+  if(!code){msg.className='formmsg err';msg.textContent='Enter a code.';return;}
+  if(crews.some(c=>c.code===code)){msg.className='formmsg err';msg.textContent='That code already exists.';return;}
+  const row={code, crew_id:lane, crew_name:name||('Crew '+lane)};
+  try{
+    if(sb){ const {error}=await sb.from('sched_crew_codes').upsert(row); if(error)throw error; }
+    // also add/update the lane on the board so the crew has somewhere to see jobs + members
+    if(sb && members){ await addLaneToBoard(lane, name||('Crew '+lane), members); }
+    msg.className='formmsg ok';msg.textContent='Crew added ✓';
+    document.getElementById('a-name').value='';document.getElementById('a-code').value='';document.getElementById('a-members').value='';
+    await loadCrews();
+  }catch(e){ msg.className='formmsg err';msg.textContent='Error: '+e.message; }
+}
+
+async function addLaneToBoard(laneId,name,members){
+  try{
+    const {data}=await sb.from('sched_boards').select('data').eq('id',BOARD_ID).maybeSingle();
+    const board=data?data.data:{crews:[],gantries:[]};
+    if(!Array.isArray(board.crews))board.crews=[];
+    const existing=board.crews.find(c=>c.id===laneId);
+    if(existing){ existing.name=name; if(members)existing.members=members; }
+    else{ board.crews.push({id:laneId,name,color:LANE_COLORS[laneId]||'#7ec8c3',cap:3,members}); }
+    await sb.from('sched_boards').upsert({id:BOARD_ID,data:board,tag:'admin',updated_at:new Date().toISOString()});
+  }catch(e){ console.warn('board lane update',e.message); }
+}
+
+async function delCrew(code){
+  if(!confirm('Delete crew code '+code+'? Their QR stops working.'))return;
+  try{ if(sb){ await sb.from('sched_crew_codes').delete().eq('code',code); } await loadCrews(); }
+  catch(e){ alert('Delete failed: '+e.message); }
+}
+
+let editCode=null;
+function laneOptions(sel){
+  const opts=[];
+  boardCrews.forEach(c=>opts.push(`<option value="${c.id}">${esc(c.id)} — ${esc(c.name||'')}</option>`));
+  LANES.forEach(l=>{ if(!boardCrews.some(c=>c.id===l)) opts.push(`<option value="${l}">${l} (new lane)</option>`); });
+  sel.innerHTML=opts.join('');
+}
+function openEdit(idx){
+  const c=crews[idx]; if(!c)return;
+  editCode=c.code;
+  document.getElementById('e-code').textContent=c.code;
+  document.getElementById('e-name').value=c.crew_name||'';
+  laneOptions(document.getElementById('e-lane'));
+  document.getElementById('e-lane').value=c.crew_id||'A';
+  // members come from the board lane
+  const bc=boardCrews.find(x=>x.id===c.crew_id);
+  document.getElementById('e-members').value=bc?(bc.members||''):'';
+  document.getElementById('e-msg').textContent='';
+  document.getElementById('editScrim').classList.add('on');
+}
+function closeEdit(){document.getElementById('editScrim').classList.remove('on');editCode=null;}
+async function saveEdit(){
+  if(!editCode)return;
+  const name=document.getElementById('e-name').value.trim();
+  const lane=document.getElementById('e-lane').value;
+  const members=document.getElementById('e-members').value.trim();
+  const msg=document.getElementById('e-msg');
+  try{
+    if(sb){
+      const {error}=await sb.from('sched_crew_codes').update({crew_id:lane,crew_name:name||('Crew '+lane)}).eq('code',editCode);
+      if(error)throw error;
+      await addLaneToBoard(lane, name||('Crew '+lane), members);   // keep board lane in sync
+    }
+    // refresh board crews cache so member edits show next open
+    try{const {data}=await sb.from('sched_boards').select('data').eq('id',BOARD_ID).maybeSingle();if(data&&data.data&&Array.isArray(data.data.crews))boardCrews=data.data.crews;}catch(e){}
+    closeEdit(); await loadCrews();
+  }catch(e){ msg.className='formmsg err';msg.textContent='Error: '+e.message; }
+}
+document.getElementById('e-save').onclick=saveEdit;
+document.getElementById('e-cancel').onclick=closeEdit;
+document.getElementById('e-close').onclick=closeEdit;
+document.getElementById('editScrim').addEventListener('click',e=>{if(e.target.id==='editScrim')closeEdit();});
+
+// suggest a code from the name
+document.getElementById('a-name').onblur=()=>{
+  const cin=document.getElementById('a-code'); if(cin.value)return;
+  const n=document.getElementById('a-name').value.trim();
+  const letter=(n.match(/crew\s*([a-z])/i)||[])[1];
+  if(letter) cin.value='1430'+letter.toUpperCase();
+};
+document.getElementById('a-add').onclick=addCrew;
+document.getElementById('printAll').onclick=()=>window.print();
+
+init();
+</script>
+</body>
+</html>
