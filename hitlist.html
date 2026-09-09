@@ -67,6 +67,10 @@
   td[contenteditable]{outline:none;border-radius:3px}
   td[contenteditable]:focus{background:rgba(245,197,24,.08);box-shadow:inset 0 0 0 1px var(--hazard)}
   .xbtn{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:15px;padding:2px 6px;border-radius:4px}
+  .schedbtn{background:none;border:1px solid var(--line);color:var(--hazard);cursor:pointer;font-size:13px;font-weight:700;padding:3px 9px;border-radius:5px;margin-right:5px;font-family:inherit}
+  .schedbtn:hover{border-color:var(--hazard);background:rgba(245,197,24,.1)}
+  .schedbtn.on{background:rgba(95,174,126,.15);border-color:var(--done);color:var(--done)}
+  .jcard .schedbtn{font-size:11px;padding:4px 10px}
   .xbtn:hover{color:var(--wait);background:rgba(201,85,106,.12)}
   .sysm{font-size:11px;color:var(--ink-dim)}
   .comm{font-size:11px;color:var(--ink-faint);max-width:260px}
@@ -399,11 +403,12 @@ function cardHtml(j){
     <div class="jc-top"><span class="jc-id">${esc(j.gantry)} · ${esc(j.no)}<span class="mtag m${j.machine}">${j.machine}</span></span>
       <span class="st ${ST_CLASS[j.status]}">${j.status}</span></div>
     <div class="jc-desc">${esc(j.descr)}</div>
-    <div class="jc-meta"><span class="jc-sys">${esc(j.system)}</span></div>
+    <div class="jc-meta"><span class="jc-sys">${esc(j.system)}</span><button class="schedbtn ${j.sched_id?'on':''}" data-sched title="Add to schedule">→ Schedule</button></div>
   </div>`;
 }
 function wireCards(root){
   root.querySelectorAll('.jcard').forEach(card=>card.onclick=()=>{const j=jobs.find(x=>x.id===card.dataset.id);if(j)openSheet(j);});
+  root.querySelectorAll('.jcard [data-sched]').forEach(b=>b.onclick=(e)=>{e.stopPropagation();const card=b.closest('.jcard');const j=jobs.find(x=>x.id===card.dataset.id);if(j)openSchedModal(j);});
 }
 function rowHtml(j){
   return `<tr data-id="${j.id}">
@@ -414,7 +419,7 @@ function rowHtml(j){
     <td contenteditable data-f="system" class="sysm">${esc(j.system)}</td>
     <td contenteditable data-f="comments" class="comm">${esc(j.comments)}</td>
     <td><button class="st ${ST_CLASS[j.status]}" data-cy>${j.status}</button></td>
-    <td><button class="xbtn" data-del>✕</button></td></tr>`;
+    <td style="white-space:nowrap"><button class="schedbtn ${j.sched_id?'on':''}" data-sched title="Add to schedule">→</button><button class="xbtn" data-del>✕</button></td></tr>`;
 }
 function wireRowEdit(root){
   root.querySelectorAll('td[contenteditable]').forEach(td=>{
@@ -423,6 +428,7 @@ function wireRowEdit(root){
   });
   root.querySelectorAll('[data-cy]').forEach(b=>b.onclick=()=>{const tr=b.closest('tr');const j=jobs.find(x=>x.id===tr.dataset.id);cycleStatus(j);});
   root.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const tr=b.closest('tr');if(confirm('Delete this job?'))deleteJob(tr.dataset.id);});
+  root.querySelectorAll('[data-sched]').forEach(b=>b.onclick=(e)=>{e.stopPropagation();const tr=b.closest('tr');const j=jobs.find(x=>x.id===tr.dataset.id);if(j)openSchedModal(j);});
 }
 function cycleStatus(j){const i=STATUSES.indexOf(j.status);j.status=STATUSES[(i+1)%STATUSES.length];j.loc=j.status==='Done'?'Completed':j.status==='In Progress'?'Newcastle':j.status==='At SRL'?'SRL':'Waiting On Parts';saveJob(j);renderAll();}
 function cmp(a,b){let x=a[sortKey]||'',y=b[sortKey]||'';if(sortKey==='no'){x=+x||0;y=+y||0;}if(x<y)return -1*sortDir;if(x>y)return 1*sortDir;return 0;}
