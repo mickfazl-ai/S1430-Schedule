@@ -186,6 +186,7 @@
         <div class="nav">
           <a href="index.html">Schedule</a>
           <a href="hitlist.html" class="on">Hitlist</a>
+          <a href="crew_admin.html">Crew QR</a>
         </div>
       </div>
       <div class="metrics">
@@ -243,10 +244,28 @@
     </div>
     <div class="fld"><label>Comments</label><textarea id="sh-comments" placeholder="Optional notes"></textarea></div>
   </div>
-  <div class="sfoot">
+  <div class="sfoot" style="flex-wrap:wrap">
+    <button class="btn" id="sh-sched" style="display:none;border-color:var(--hazard);color:var(--hazard)">→ Add to schedule</button>
     <button class="btn" id="sh-delete" style="color:var(--wait);display:none">Delete</button>
     <button class="btn" id="sh-cancel">Cancel</button>
     <button class="btn primary" id="sh-save">Save</button>
+  </div>
+</div></div>
+
+<div class="sheet-scrim" id="schedScrim"><div class="sheet" id="schedModal" style="max-width:420px">
+  <h3><span>Add to schedule</span><button class="sc-close" id="sc-close">✕</button></h3>
+  <div class="sbody">
+    <div class="fld"><label>Job</label><div id="sc-jobname" style="font-size:14px;font-weight:700;padding:8px 0"></div></div>
+    <div class="fld"><label>Crew</label><select id="sc-crew"></select></div>
+    <div class="fld row2">
+      <div class="fld"><label>Start date</label><input type="date" id="sc-start"></div>
+      <div class="fld"><label>Duration (days)</label><input type="number" id="sc-dur" value="5" min="1"></div>
+    </div>
+    <div id="sc-note" style="font-size:11.5px;color:var(--ink-faint);line-height:1.4"></div>
+  </div>
+  <div class="sfoot">
+    <button class="btn" id="sc-cancel">Cancel</button>
+    <button class="btn primary" id="sc-add">Add to schedule</button>
   </div>
 </div></div>
 
@@ -301,8 +320,8 @@ async function pullAll(){
   }
   if(all.length) jobs=all.map(fromRow);
 }
-function toRow(j){return {id:j.id,machine:j.machine,gantry:j.gantry,no:j.no,descr:j.descr,system:j.system,comments:j.comments,loc:j.loc,status:j.status};}
-function fromRow(r){return {id:r.id,machine:r.machine,gantry:r.gantry,no:r.no,descr:r.descr,system:r.system,comments:r.comments,loc:r.loc,status:r.status};}
+function toRow(j){return {id:j.id,machine:j.machine,gantry:j.gantry,no:j.no,descr:j.descr,system:j.system,comments:j.comments,loc:j.loc,status:j.status,sched_id:j.sched_id||null,signed_by:j.signed_by||null,signed_at:j.signed_at||null};}
+function fromRow(r){return {id:r.id,machine:r.machine,gantry:r.gantry,no:r.no,descr:r.descr,system:r.system,comments:r.comments,loc:r.loc,status:r.status,sched_id:r.sched_id||null,signed_by:r.signed_by||null,signed_at:r.signed_at||null};}
 
 function subscribe(){
   sb.channel('jobs').on('postgres_changes',{event:'*',schema:'public',table:'sched_jobs'},payload=>{
@@ -494,6 +513,8 @@ function openSheet(job){
     document.getElementById('sh-comments').value=job.comments||'';
     sheetStatus=job.status||'In Progress';
     document.getElementById('sh-delete').style.display='block';
+    document.getElementById('sh-sched').style.display='block';
+    document.getElementById('sh-sched').textContent = job.sched_id ? '✓ On schedule (update)' : '→ Add to schedule';
   }else{
     document.getElementById('sh-title').textContent='Add job';
     document.getElementById('sh-machine').value=fMachine.value||'1430';
@@ -504,6 +525,7 @@ function openSheet(job){
     document.getElementById('sh-comments').value='';
     sheetStatus='In Progress';
     document.getElementById('sh-delete').style.display='none';
+    document.getElementById('sh-sched').style.display='none';
   }
   drawStatusBtns();
   document.getElementById('sheetScrim').classList.add('on');
@@ -552,6 +574,82 @@ document.getElementById('viewSeg').onclick=e=>{const b=e.target.closest('button'
 ['fMachine','fGantry','fSystem','fStatus'].forEach(id=>document.getElementById(id).onchange=renderAll);
 document.getElementById('fSearch').oninput=()=>{clearTimeout(saveT2);saveT2=setTimeout(renderAll,180);};
 document.getElementById('addJob').onclick=addJob;
+/* ========== bridge: add hitlist job to the schedule board ========== */
+const SCHED_BOARD_ID="s1430";
+const SCHED_CREWS_FALLBACK=[
+  {id:"A",name:"Crew A"},{id:"B",name:"Crew B"},{id:"C",name:"Crew C"},
+  {id:"D",name:"Crew D"},{id:"E",name:"Crew E"}
+];
+let schedBoardCache=null;
+async function readSchedBoard(){
+  if(!(cloud&&sb)) return null;
+  const {data,error}=await sb.from('sched_boards').select('data').eq('id',SCHED_BOARD_ID).maybeSingle();
+  if(error){console.warn('read board',error.message);return null;}
+  return data?data.data:null;
+}
+async function writeSchedBoard(board){
+  if(!(cloud&&sb)) return false;
+  const {error}=await sb.from('sched_boards').upsert({id:SCHED_BOARD_ID,data:board,tag:'hitlist-'+myTag,updated_at:new Date().toISOString()});
+  if(error){console.warn('write board',error.message);return false;}
+  return true;
+}
+
+let schedTargetJob=null;
+async function openSchedModal(job){
+  schedTargetJob=job;
+  document.getElementById('sc-jobname').textContent=job.gantry+' · '+(job.no||'')+' — '+(job.descr||'');
+  // crews from the live board if we can read it, else fallback
+  schedBoardCache=await readSchedBoard();
+  const crews = (schedBoardCache&&Array.isArray(schedBoardCache.crews)&&schedBoardCache.crews.length)?schedBoardCache.crews:SCHED_CREWS_FALLBACK;
+  const csel=document.getElementById('sc-crew');
+  csel.innerHTML=crews.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  // default start = today
+  document.getElementById('sc-start').value=new Date().toISOString().slice(0,10);
+  document.getElementById('sc-dur').value=5;
+  document.getElementById('sc-note').textContent = schedBoardCache? 'This adds a dated job onto the schedule board, linked to this hitlist job.' : 'Schedule board not reachable — check connection.';
+  document.getElementById('schedScrim').classList.add('on');
+}
+function closeSchedModal(){document.getElementById('schedScrim').classList.remove('on');schedTargetJob=null;}
+
+async function confirmAddToSchedule(){
+  const job=schedTargetJob; if(!job) return;
+  const board=schedBoardCache||await readSchedBoard();
+  if(!board){alert('Could not reach the schedule board. Try again when online.');return;}
+  if(!Array.isArray(board.gantries)) board.gantries=[];
+  const crewId=document.getElementById('sc-crew').value;
+  const startISO=document.getElementById('sc-start').value;
+  const dur=Math.max(1,+document.getElementById('sc-dur').value||5);
+  // compute day index from board's project start
+  const projStart=new Date((board.startISO||startISO)+"T00:00:00");
+  const startIdx=Math.max(0,Math.round((new Date(startISO+"T00:00:00")-projStart)/86400000));
+  // build linked schedule job (id shared for the two-way link)
+  const linkId = job.sched_id || ('h'+job.id);
+  // remove any existing copy with same link, then add fresh
+  board.gantries=board.gantries.filter(g=>g.id!==linkId);
+  board.gantries.push({
+    id: linkId,
+    crew: crewId,
+    start: startIdx,
+    dur: dur,
+    pri: 'norm',
+    scope: (job.gantry+' · '+(job.system||'')+' — '+(job.descr||'')).slice(0,120),
+    jobs: [{t:(job.descr||'Job'), done: job.status==='Done'}],
+    srcJobId: job.id           // link back to the hitlist job
+  });
+  const ok=await writeSchedBoard(board);
+  if(!ok){alert('Failed to write to schedule.');return;}
+  // stamp the hitlist job with the link
+  job.sched_id=linkId; saveJob(job);
+  closeSchedModal(); closeSheet(); renderAll();
+  flash('Added to schedule ✓');
+}
+
+document.getElementById('sh-sched').onclick=()=>{ if(sheetJob) openSchedModal(sheetJob); };
+document.getElementById('sc-cancel').onclick=closeSchedModal;
+document.getElementById('sc-close').onclick=closeSchedModal;
+document.getElementById('sc-add').onclick=confirmAddToSchedule;
+document.getElementById('schedScrim').addEventListener('click',e=>{if(e.target.id==='schedScrim')closeSchedModal();});
+
 document.getElementById('sh-save').onclick=saveSheet;
 document.getElementById('sh-cancel').onclick=closeSheet;
 document.getElementById('sh-close').onclick=closeSheet;
