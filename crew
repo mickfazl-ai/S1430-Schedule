@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S1430 Crew · My Week</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@600;700&display=swap');
+  :root{
+    --steel-900:#15181c;--steel-850:#1a1e23;--steel-800:#20252b;--steel-700:#2b323a;--steel-600:#3a434d;--line:#39424c;
+    --ink:#eef2f5;--ink-dim:#9aa7b2;--ink-faint:#6b7883;--hazard:#f5c518;--hazard-deep:#d9a400;
+    --done:#5fae7e;--prog:#4f83cc;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Archivo',system-ui,sans-serif;background:var(--steel-900);color:var(--ink);font-size:15px;-webkit-font-smoothing:antialiased;padding-bottom:40px}
+  .hazbar{height:8px;background:repeating-linear-gradient(45deg,var(--hazard) 0 18px,#111 18px 36px)}
+  .wrap{max-width:640px;margin:0 auto;padding:0 16px}
+
+  /* login */
+  .login{min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:20px;padding:20px}
+  .login .badge{font-family:'Archivo Narrow';font-weight:700;letter-spacing:1px;color:var(--hazard);font-size:14px}
+  .login h1{font-size:30px;font-weight:800;letter-spacing:-1px}
+  .login p{color:var(--ink-dim);font-size:14px;max-width:36ch}
+  .codebox{display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px}
+  .codebox input{background:var(--steel-800);border:2px solid var(--line);color:var(--ink);border-radius:10px;padding:16px;font-size:24px;font-weight:700;text-align:center;letter-spacing:4px;font-family:inherit;text-transform:uppercase}
+  .codebox input:focus{outline:none;border-color:var(--hazard)}
+  .bigbtn{background:var(--hazard);color:#1a1300;border:none;border-radius:10px;padding:16px;font-size:17px;font-weight:800;cursor:pointer;font-family:inherit}
+  .bigbtn:active{background:var(--hazard-deep)}
+  .qrhint{font-size:12px;color:var(--ink-faint);display:flex;align-items:center;gap:8px}
+  .err{color:#e08497;font-size:13px;min-height:18px}
+  #scanBtn{background:var(--steel-700);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+  #reader{width:100%;max-width:300px;border-radius:10px;overflow:hidden;display:none}
+
+  /* app */
+  .app{display:none}
+  header.crewhdr{padding:16px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  header.crewhdr .cn{font-size:22px;font-weight:800;display:flex;align-items:center;gap:9px}
+  header.crewhdr .cbadge{width:16px;height:16px;border-radius:4px}
+  header.crewhdr .members{font-size:12px;color:var(--ink-dim);margin-top:2px}
+  .logout{background:none;border:1px solid var(--line);color:var(--ink-dim);border-radius:7px;padding:7px 12px;font-size:12px;cursor:pointer;font-family:inherit}
+  .weeknav{display:flex;align-items:center;gap:10px;justify-content:center;margin:16px 0}
+  .weeknav button{background:var(--steel-700);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:9px 14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+  .weeknav .wlabel{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;min-width:150px;text-align:center}
+  .daygroup{margin-bottom:18px}
+  .dayhdr{font-family:'Archivo Narrow';font-weight:700;font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--hazard);padding:6px 0;border-bottom:1px solid var(--line);margin-bottom:9px}
+  .jcard{background:var(--steel-850);border:1px solid var(--line);border-left:5px solid var(--prog);border-radius:9px;padding:13px;margin-bottom:10px}
+  .jcard.done{border-left-color:var(--done);opacity:.75}
+  .jc-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+  .jc-id{font-size:17px;font-weight:800}
+  .jc-fat{font-size:9px;font-weight:800;background:var(--hazard);color:#1a1300;padding:1px 6px;border-radius:3px;margin-left:6px}
+  .jc-dates{font-size:11px;color:var(--ink-faint)}
+  .jc-scope{font-size:13px;color:var(--ink-dim);line-height:1.35;margin-bottom:10px}
+  .tasks{display:flex;flex-direction:column;gap:2px;margin-bottom:11px}
+  .taskrow{display:flex;align-items:center;gap:10px;padding:7px 4px;border-radius:6px}
+  .taskrow input{width:22px;height:22px;flex:none;accent-color:var(--done);cursor:pointer}
+  .taskrow label{font-size:14px;flex:1;line-height:1.3}
+  .taskrow.done label{text-decoration:line-through;color:var(--ink-faint)}
+  .signrow{display:flex;gap:9px;align-items:center;border-top:1px dashed var(--line);padding-top:10px}
+  .signrow input{flex:1;background:var(--steel-800);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:10px;font-family:inherit;font-size:14px}
+  .signbtn{background:var(--done);color:#08210f;border:none;border-radius:7px;padding:10px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .signbtn:disabled{background:var(--steel-600);color:var(--ink-faint);cursor:not-allowed}
+  .signed{font-size:12px;color:var(--done);font-weight:700;display:flex;align-items:center;gap:6px;padding-top:10px;border-top:1px dashed var(--line)}
+  .empty{text-align:center;color:var(--ink-faint);padding:40px 20px;font-size:14px}
+  #syncDot{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-faint)}
+  #syncDot i{width:9px;height:9px;border-radius:50%;background:var(--ink-faint)}
+</style>
+</head>
+<body>
+<div class="hazbar"></div>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div class="login" id="login">
+    <div class="badge">HERRENKNECHT S-1430 · CREW SIGN-IN</div>
+    <h1>My Week</h1>
+    <p>Enter your crew code to see your jobs for the week. Ask your supervisor for the code, or scan the QR on your crew sheet.</p>
+    <div class="codebox">
+      <input id="codeInput" placeholder="CREW CODE" maxlength="12" autocomplete="off">
+      <button class="bigbtn" id="loginBtn">Sign in</button>
+      <button id="scanBtn">📷 Scan QR code</button>
+      <div id="reader"></div>
+      <div class="err" id="loginErr"></div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div class="app" id="app">
+    <header class="crewhdr">
+      <div>
+        <div class="cn"><span class="cbadge" id="crewBadge"></span><span id="crewName">Crew</span></div>
+        <div class="members" id="crewMembers"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="syncDot"><i></i><span id="syncTxt">live</span></span>
+        <button class="logout" id="logoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <div class="weeknav">
+      <button id="prevWk">‹</button>
+      <div class="wlabel" id="wlabel">This week</div>
+      <button id="nextWk">›</button>
+    </div>
+
+    <div id="jobList"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+const SB_URL="https://mrnrnlhdjdanchzwafwl.supabase.co";
+const SB_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybnJubGhkamRhbmNoendhZndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzg0MDQsImV4cCI6MjA4NzY1NDQwNH0.0xgX3kvU57uLHbvXzRfnXT0aF4JKqRLxLWIUTpAU-0M";
+const BOARD_ID="s1430";
+const DOW=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const CREW_HEX={A:"#4f83cc",B:"#5fae7e",C:"#c8794a",D:"#a97bc4",E:"#c9556a"};
+
+let sb=null, board=null, crew=null, weekOffset=0;
+
+function setSync(s){const d=document.getElementById('syncDot');if(!d)return;const i=d.querySelector('i'),t=document.getElementById('syncTxt');
+  const m={live:['#5fae7e','live'],saving:['#f5c518','saving…'],offline:['#c9556a','offline']};const[c,x]=m[s]||m.live;i.style.background=c;t.textContent=x;}
+
+/* ---------- init supabase ---------- */
+function initSb(){ if(!sb && window.supabase) sb=window.supabase.createClient(SB_URL,SB_ANON,{realtime:{params:{eventsPerSecond:3}}}); return sb; }
+
+/* ---------- login ---------- */
+async function tryLogin(code){
+  code=(code||'').trim().toUpperCase();
+  const err=document.getElementById('loginErr');
+  if(!code){err.textContent='Enter your crew code.';return;}
+  if(!initSb()){err.textContent='No connection. Try again when online.';return;}
+  err.textContent='Checking…';
+  try{
+    const {data,error}=await sb.from('sched_crew_codes').select('*').eq('code',code).maybeSingle();
+    if(error) throw error;
+    if(!data){err.textContent='Code not recognised.';return;}
+    crew={id:data.crew_id,name:data.crew_name||('Crew '+data.crew_id),code};
+    localStorage.setItem('crewCode',code);
+    await enterApp();
+  }catch(e){ err.textContent='Error: '+e.message; }
+}
+
+async function enterApp(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('crewName').textContent=crew.name;
+  document.getElementById('crewBadge').style.background=CREW_HEX[crew.id]||'#888';
+  await loadBoard();
+  subscribe();
+  render();
+}
+
+async function loadBoard(){
+  try{
+    const {data,error}=await sb.from('sched_boards').select('data').eq('id',BOARD_ID).maybeSingle();
+    if(error) throw error;
+    board=data?data.data:{crews:[],gantries:[],startISO:new Date().toISOString().slice(0,10)};
+    // crew members from board
+    const c=(board.crews||[]).find(x=>x.id===crew.id);
+    document.getElementById('crewMembers').textContent=c?c.members||'':'';
+    setSync('live');
+  }catch(e){ setSync('offline'); console.warn(e); }
+}
+
+function subscribe(){
+  if(!sb)return;
+  sb.channel('crew_'+BOARD_ID).on('postgres_changes',{event:'*',schema:'public',table:'sched_boards',filter:'id=eq.'+BOARD_ID},
+    payload=>{ if(payload.new&&payload.new.data){board=payload.new.data;render();} }).subscribe();
+}
+
+/* ---------- date helpers ---------- */
+function projStart(){return new Date((board.startISO||new Date().toISOString().slice(0,10))+"T00:00:00");}
+function dateForDay(i){const d=projStart();d.setDate(d.getDate()+i);return d;}
+function mondayOffset(){ // day index of monday of the shown week
+  const t=new Date();t.setHours(0,0,0,0);
+  const todayIdx=Math.round((t-projStart())/86400000);
+  const dow=(t.getDay()+6)%7;
+  return todayIdx-dow + weekOffset*7;
+}
+
+/* ---------- render ---------- */
+function render(){
+  const monIdx=mondayOffset();
+  const mon=dateForDay(monIdx), sun=dateForDay(monIdx+6);
+  document.getElementById('wlabel').textContent = (weekOffset===0?'This week · ':'')+
+    `${mon.getDate()} ${MON[mon.getMonth()]} – ${sun.getDate()} ${MON[sun.getMonth()]}`;
+  // my jobs active any day this week
+  const mine=(board.gantries||[]).filter(g=>g.crew===crew.id && g.start<monIdx+7 && (g.start+g.dur)>monIdx);
+  const list=document.getElementById('jobList');
+  if(!mine.length){list.innerHTML='<div class="empty">No jobs scheduled for your crew this week.</div>';return;}
+  // group by start day within the week (or show once under its start)
+  mine.sort((a,b)=>a.start-b.start);
+  list.innerHTML=mine.map(jobCard).join('');
+  wire(mine);
+}
+
+function jobCard(g){
+  const tasks=g.jobs||[];
+  const allDone=tasks.length>0 && tasks.every(t=>t.done);
+  const sd=dateForDay(g.start), ed=dateForDay(g.start+g.dur-1);
+  const signed = g.signed_by;
+  const taskHtml=tasks.map((t,i)=>`
+    <div class="taskrow ${t.done?'done':''}">
+      <input type="checkbox" ${t.done?'checked':''} data-gt="${g.id}" data-ti="${i}" ${signed?'disabled':''}>
+      <label>${esc(t.t||'')}</label>
+    </div>`).join('');
+  const signBlock = signed
+    ? `<div class="signed">✓ Signed off by ${esc(g.signed_by)} · ${esc((g.signed_at||'').slice(0,10))}</div>`
+    : `<div class="signrow">
+        <input placeholder="Your name to sign off" data-signname="${g.id}" ${allDone?'':'disabled'}>
+        <button class="signbtn" data-sign="${g.id}" ${allDone?'':'disabled'}>Sign off</button>
+      </div>`;
+  return `<div class="jcard ${allDone?'done':''}" data-id="${g.id}" style="border-left-color:${CREW_HEX[crew.id]||'var(--prog)'}">
+    <div class="jc-top"><span class="jc-id">${esc(g.id)}${g.pri==='fat'?'<span class="jc-fat">FAT</span>':''}</span>
+      <span class="jc-dates">${sd.getDate()}/${sd.getMonth()+1} – ${ed.getDate()}/${ed.getMonth()+1}</span></div>
+    ${g.scope?`<div class="jc-scope">${esc(g.scope)}</div>`:''}
+    <div class="tasks">${taskHtml||'<div class="jc-scope">No checklist items.</div>'}</div>
+    ${signBlock}
+  </div>`;
+}
+
+function wire(mine){
+  // task ticks — update inline (no full re-render, keeps focus/DOM stable)
+  document.querySelectorAll('[data-gt]').forEach(cb=>cb.onchange=async()=>{
+    const g=board.gantries.find(x=>x.id===cb.dataset.gt); if(!g)return;
+    g.jobs[+cb.dataset.ti].done=cb.checked;
+    cb.closest('.taskrow').classList.toggle('done',cb.checked);
+    // enable/disable this card's sign-off
+    const card=cb.closest('.jcard');
+    const allDone=(g.jobs||[]).length>0 && g.jobs.every(t=>t.done);
+    const nameInp=card.querySelector('[data-signname]'), signBtn=card.querySelector('[data-sign]');
+    if(nameInp) nameInp.disabled=!allDone;
+    if(signBtn) signBtn.disabled=!allDone;
+    card.classList.toggle('done',allDone);
+    await saveBoard();
+  });
+  // sign off
+  document.querySelectorAll('[data-sign]').forEach(btn=>btn.onclick=async()=>{
+    const id=btn.dataset.sign;
+    const name=document.querySelector(`[data-signname="${id}"]`).value.trim();
+    if(!name){alert('Enter your name to sign off.');return;}
+    const g=board.gantries.find(x=>x.id===id); if(!g)return;
+    g.signed_by=name; g.signed_at=new Date().toISOString();
+    // mark all tasks done
+    (g.jobs||[]).forEach(t=>t.done=true);
+    await saveBoard();
+    // write back to hitlist if linked
+    if(g.srcJobId){ await signHitlist(g.srcJobId,name); }
+    render();
+  });
+}
+
+async function saveBoard(){
+  if(!sb)return;
+  setSync('saving');
+  try{
+    const {error}=await sb.from('sched_boards').upsert({id:BOARD_ID,data:board,tag:'crew-'+crew.id,updated_at:new Date().toISOString()});
+    if(error)throw error; setSync('live');
+  }catch(e){ setSync('offline'); console.warn(e); }
+}
+async function signHitlist(srcId,name){
+  try{
+    await sb.from('sched_jobs').update({status:'Done',loc:'Completed',signed_by:name,signed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',srcId);
+  }catch(e){ console.warn('hitlist writeback',e.message); }
+}
+
+function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ---------- QR scan ---------- */
+let qr=null;
+document.getElementById('scanBtn').onclick=async()=>{
+  const rd=document.getElementById('reader');
+  if(rd.style.display==='block'){ if(qr){await qr.stop();qr.clear();} rd.style.display='none'; return; }
+  rd.style.display='block';
+  if(typeof Html5Qrcode==='undefined'){document.getElementById('loginErr').textContent='Scanner not loaded — type your code instead.';return;}
+  qr=new Html5Qrcode("reader");
+  try{
+    await qr.start({facingMode:"environment"},{fps:10,qrbox:200},txt=>{
+      // QR may carry the code directly, or a URL ...?code=XXXX
+      let code=txt.trim();
+      const m=txt.match(/[?&]code=([^&]+)/i); if(m)code=decodeURIComponent(m[1]);
+      qr.stop().then(()=>{qr.clear();rd.style.display='none';});
+      document.getElementById('codeInput').value=code.toUpperCase();
+      tryLogin(code);
+    },()=>{});
+  }catch(e){ document.getElementById('loginErr').textContent='Camera unavailable — type your code.'; rd.style.display='none'; }
+};
+
+/* ---------- controls ---------- */
+document.getElementById('loginBtn').onclick=()=>tryLogin(document.getElementById('codeInput').value);
+document.getElementById('codeInput').onkeydown=e=>{if(e.key==='Enter')tryLogin(e.target.value);};
+document.getElementById('logoutBtn').onclick=()=>{localStorage.removeItem('crewCode');location.reload();};
+document.getElementById('prevWk').onclick=()=>{weekOffset--;render();};
+document.getElementById('nextWk').onclick=()=>{weekOffset++;render();};
+
+/* auto-login if code saved, or from ?code= in URL */
+(function(){
+  const u=new URLSearchParams(location.search);
+  const urlCode=u.get('code');
+  const saved=localStorage.getItem('crewCode');
+  if(urlCode){ document.getElementById('codeInput').value=urlCode.toUpperCase(); tryLogin(urlCode); }
+  else if(saved){ tryLogin(saved); }
+})();
+</script>
+</body>
+</html>
